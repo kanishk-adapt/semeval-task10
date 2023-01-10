@@ -18,7 +18,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn import metrics
 import sys
 
-from predictor_interface import SexismDetectorInterface
+from predictor_interface import SexismDetector
 
 
 fine_grained_labels = '1.1 1.2 2.1 2.2 2.3 3.1 3.2 3.3 3.4 4.1 4.2'.split()
@@ -28,7 +28,7 @@ for index, label in enumerate(fine_grained_labels):
     label2index[label] = index
 
 
-class SexismDetectorWithVocab(SexismDetectorInterface):
+class SexismDetectorWithVocab(SexismDetector):
 
     def __init__(self, tokeniser = None, min_freq = 5, **kwargs)
         super.__init__(self, **kwargs)
@@ -40,15 +40,8 @@ class SexismDetectorWithVocab(SexismDetectorInterface):
         self.reset_vocab()
         self.add_to_vocab_from_data(data_with_labels)
         self.finalise_vocab()
-        # (2) get descriptive and target features
-        tr_features = self.extract_features(
-            data_with_labels
-        )
-        tr_targets = self.get_targets(data_with_labels)
-        # (3) train the core model
-        self.train_model_on_features(tr_features, tr_targets)
-
-    # TODO: implement predict() here
+        # (2) extract features and train the model
+        super.train(data_with_labels)
         
     def reset_vocab(self):
         self.vocab = defaultdict(lambda: 0)   # for each entry, record number of occurrences
@@ -75,23 +68,6 @@ class SexismDetectorWithVocab(SexismDetectorInterface):
     def get_vector_length(self):  # sub-classes may want to add components for non-vocab features
         return len(self.vocab)
 
-    def get_vector_dtype(self):  # sub-classes may want to use a different type, e.g. float
-        return numpy.int32
-
-    def extract_features(self, data):
-        ''' get feature vector for each document in data '''
-        # create numpy array of required size
-        columns = self.get_vector_length()
-        dtype   = self.get_vector_dtype()
-        rows = len(data)
-        features = numpy.zeros((rows, columns), dtype=dtype)
-        # populate feature matrix
-        for row, item in enumerate(data):
-            vector = self.get_item_feature_vector(item)
-            for column in range(columns):
-                features[row, column] = vector[column]
-        return features
-
     def get_item_feature_vector(self, item):  # sub-classes may want to add features here
         columns = self.get_vector_length()
         dtype   = self.get_vector_dtype()
@@ -107,42 +83,12 @@ class SexismDetectorWithVocab(SexismDetectorInterface):
                 vector[index] += 1
         return vector
 
-    def get_targets(self, data):
-        ''' create column vector with target labels
-        '''
-        global label2index
-        # prepare target vector
-        targets = numpy.zeros(len(data), dtype=numpy.int8)
-        for index, item in enumerate(data):
-            label == item.label
-            if label == 'none':
-                assert self.task == 'a'  # for tasks b and c, "none" items must not be in the data
-                # nothing else to do as array is populated with zeroes above
-            elif self.task == 'a':
-                targets[index] = 1
-            elif self.task == 'b':
-                # first digit in label indicates coarse sexism category
-                coarse_category = int(label[0])
-                assert coarse_category >= 1
-                targets[index] = coarse_category - 1   # use 0 for first label
-            elif self.task == 'c':
-                targets[index] = label2index[label]
-            else:
-                raise ValueError('unsupported task %r' %self.task)
-        return targets
-    
     # the following functions will have to be implemented in sub-classes
     # to be able to use above functionality
 
     def get_item_atoms(self, item):
         raise NotImplementedError
     
-    def get_targets(self, data):
-        raise NotImplementedError
-
-    def train_model_on_features(self, tr_features, tr_targets):
-        raise NotImplementedError
-
 
 class SexismDetectorWithNgrams(SexismDetectorWithVocab):
 
@@ -166,46 +112,4 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
                 ngram = tokens[start:start+n]
                 yield tuple(ngram)
                 start += 1
-
-
-## more material from CA4023-NLP likely to be used:
-
-class PolarityPredictorBowNB(PolarityPredictorWithBagOfWords):
-
-    def train_model_on_features(self, tr_features, tr_targets):
-        # pass numpy array to sklearn to train NB
-        self.model = MultinomialNB()
-        self.model.fit(tr_features, tr_targets)
-
-    def predict(
-        self, data, get_accuracy = False,
-        get_confusion_matrix = False
-    ):
-        features = self.extract_features(data)
-        # use numpy to get predictions
-        y_pred = self.model.predict(features)
-        # restore labels
-        labels = []
-        for is_positive in y_pred:
-            if is_positive:
-                labels.append('pos')
-            else:
-                labels.append('neg')
-        if get_accuracy or get_confusion_matrix:
-            retval = []
-            retval.append(labels)
-            y_true = self.get_targets(data)
-            if get_accuracy:
-                retval.append(
-                    metrics.accuracy_score(y_true, y_pred)
-                )
-            if get_confusion_matrix:
-                retval.append(
-                    metrics.confusion_matrix(y_true, y_pred)
-                )
-            return retval
-        else:
-            return labels
-
-
 
