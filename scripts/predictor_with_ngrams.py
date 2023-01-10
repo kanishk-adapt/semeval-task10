@@ -15,7 +15,6 @@ from __future__ import print_function
 
 from collections import defaultdict
 from sklearn.naive_bayes import MultinomialNB
-from sklearn import metrics
 import sys
 
 from predictor_interface import SexismDetector
@@ -30,7 +29,7 @@ for index, label in enumerate(fine_grained_labels):
 
 class SexismDetectorWithVocab(SexismDetector):
 
-    def __init__(self, tokeniser = None, min_freq = 5, **kwargs)
+    def __init__(self, tokeniser = None, min_freq = 5, **kwargs):
         super.__init__(self, **kwargs)
         self.tokeniser = tokeniser
         self.min_freq  = min_freq
@@ -92,7 +91,7 @@ class SexismDetectorWithVocab(SexismDetector):
 
 class SexismDetectorWithNgrams(SexismDetectorWithVocab):
 
-    def __init__(self, ngram_range = None, padding = None, **kwargs)
+    def __init__(self, ngram_range = None, padding = None, **kwargs):
         super.__init__(self, **kwargs)
         if not ngram_range:
             ngram_range = [1]
@@ -112,4 +111,7 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
                 ngram = tokens[start:start+n]
                 yield tuple(ngram)
                 start += 1
+
+            #if self.debug: sys.stderr.write('Loaded document %s\n' %doc_id)
+        self.is_labelled = is_labelled
 
