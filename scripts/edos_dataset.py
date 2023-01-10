@@ -88,7 +88,8 @@ def main():
             )
     parser.add_argument(
             '--settype', type=str, default='official-training',
-            help='Which split to load: training or test'
+            help='Which split to load: official-dev-[abs], official-training,'
+                 ' internal-training, internal-dev'
                  ' (default: official-training)',
             )
     parser.add_argument(
