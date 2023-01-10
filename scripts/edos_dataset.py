@@ -18,13 +18,13 @@ import sys
 
 settype2setting = {
     # dataset name --> path suffix, is_labelled, cross-validation
-    'official-dev-a': ('dev-task-a/dev_task_a_entries.csv', False, False)
-    'official-dev-b': ('dev-task-b/dev_task_b_entries.csv', False, False)
-    'official-dev-c': ('dev-task-c/dev_task_c_entries.csv', False, False)
+    'official-dev-a': ('dev-task-a/dev_task_a_entries.csv', False, False),
+    'official-dev-b': ('dev-task-b/dev_task_b_entries.csv', False, False),
+    'official-dev-c': ('dev-task-c/dev_task_c_entries.csv', False, False),
     # TODO: official test sets
-    'official-training': ('train_all_tasks.csv', True, False)
-    'internal-training': ('k2020-tr-run-%d.csv', True, True)
-    'internal-dev':      ('k2020-dev-run-%d.csv', True, True)
+    'official-training': ('train_all_tasks.csv', True, False),
+    'internal-training': ('k8020-tr-run-%d.csv', True, True),
+    'internal-dev':      ('k8020-dev-run-%d.csv', True, True),
 }
 
 class EDOSDataset(Dataset):
@@ -46,7 +46,8 @@ class EDOSDataset(Dataset):
             path_suffix = path_suffix %run
         path = os.path.join(path, path_suffix)
         df = pandas.read_csv(path)
-        for row in df:
+        # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas
+        for _, row in df.iterrows():
             label  = row['label_vector'][:4].rstrip()  # 'none' or '%d.%d' format
             if skip_not_sexist and label == 'none':
                 continue
@@ -59,6 +60,7 @@ class EDOSDataset(Dataset):
             self.doc2label.append(label)
             if not label in self.labels:
                 self.labels.append(label)
+            #if self.debug: sys.stderr.write('Loaded document %s\n' %doc_id)
 
 def main():
     import argparse
@@ -84,19 +86,25 @@ def main():
             )
     parser.add_argument(
             '--unit',    type=str, default='document',
-            help='Create N instances for each unit (`document` or `class`)'
+            help='Unit to use with option --items_per_unit (`document` or `class`)'
                  ' (default: document)',
             )
     parser.add_argument(
-            '--items_per_unit', type=int, default=5,
+            '--items_per_unit', type=int, default=1,
             help='How many instances (N) to create for each unit '
-                 ' (deduplication may prevent reaching N; default: 5)',
+                 ' (deduplication may prevent reaching N; default: 1)',
             )
     parser.add_argument(
-            '--fraction_of_subunits', type=float, default=1.0,
-            help='What fraction of subunits, e.g. documents for class, to include'
-                 ' in each instance, 0.0 to 1.0; must be 1 for unit `document` as'
-                 ' documents have no subunits (default: 1.0)',
+            '--fraction_of_subunits', type=float, default=0.0,
+            help='What fraction of subunits, e.g. documents for each class, to include'
+                 ' in each instance, 0.0 to 1.0; must be 0 or 1 for unit `document` as'
+                 ' documents have no subunits (default: 0.0)',
+            )
+    parser.add_argument(
+            '--number_of_subunits', type=int, default=0,
+            help='What number of subunits, e.g. documents for each class, to include'
+                 ' in each instance, 1 to ??; must be 0 for unit `document` as'
+                 ' documents have no subunits (default: 0)',
             )
     # https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
     parser.add_argument('--deduplicate', action='store_true')
@@ -106,14 +114,17 @@ def main():
             )
     parser.set_defaults(deduplicate=True)
     args = parser.parse_args()
-
+    if args.fraction_of_subunits == 0.0: args.fraction_of_subunits = None
+    if args.number_of_subunits == 0.0: args.number_of_subunits = None
     data = EDOSDataset(
         args.seed,
         args.path, args.run, args.settype,
         unit = args.unit, items_per_unit = args.items_per_unit,
         fraction_of_subunits = args.fraction_of_subunits,
+        number_of_subunits = args.number_of_subunits,
         deduplicate = args.deduplicate,
     )
+    print('Number of items:', len(data))
     data.save_to_file(sys.stdout)
 
 if __name__ == '__main__':

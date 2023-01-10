@@ -82,7 +82,8 @@ class Item:
         text, info = self.get_text_and_info()
         header = 'index\tdoc_idx\tID\ttokens\n'
         out.write(header)
-        for seq_idx, doc_idx, n_tokens in info:
+        seq_idx = 0
+        for doc_idx, n_tokens in info:
             row = []
             row.append('%d' %seq_idx)
             row.append('%d' %doc_idx)
@@ -91,6 +92,7 @@ class Item:
             row.append('%d' %n_tokens)
             out.write('\t'.join(row))
             out.write('\n')
+            seq_idx += 1
         wrapped_text, n_lines = self.dataset.wrap_text(text)
         out.write('text with %d lines follows\n' %n_lines)
         out.write(wrapped_text)
@@ -157,8 +159,9 @@ class Dataset(collections.Sequence):
         if unit == 'document':
             if items_per_unit != 1 and deduplicate:
                 raise ValueError('Asking for %d copies of each document and deduplication' %items_per_unit)
-            if fraction_of_subunits is not None \
+            if (fraction_of_subunits is not None and (0.0 < fraction_of_subunits < 1.0)) \
             or number_of_subunits   is not None:
+                if self.debug: sys.stderr.write('%r, %r\n' %(fraction_of_subunits, number_of_subunits))
                 raise NotImplementedError  # currently no support for subunits of documents
         elif unit == 'class':
             if not fraction_of_subunits and not number_of_subunits:
@@ -224,12 +227,12 @@ class Dataset(collections.Sequence):
                 self._add_item(Item(self, sample_of_documents, label))
 
     def _reset_items_for_per_document_mode(self):
-        assert self.fraction_of_subunits is None
+        assert self.fraction_of_subunits is None or self.fraction_of_subunits in (0.0, 1.0)
         assert self.number_of_subunits is None
         for doc_idx in range(len(self.documents)):
             label = self.doc2label[doc_idx]
-        for copy in range(self.items_per_unit):
-            self._add_item(Item(self, [doc_idx], label))
+            for copy in range(self.items_per_unit):
+                self._add_item(Item(self, [doc_idx], label))
 
     def _get_samples(self, candidates, size, fraction_of_candidates, number_of_candidates, extra_seed = ''):
         extra_seed = extra_seed.encode('utf-8')
