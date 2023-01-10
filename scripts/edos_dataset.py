@@ -44,11 +44,16 @@ class EDOSDataset(Dataset):
         path_suffix, is_labelled, cross_validation = settype2setting[settype]
         if cross_validation:
             path_suffix = path_suffix %run
+        if skip_not_sexist and not is_labelled:
+            raise ValueError('Cannot skip non-sexists items in unlabelled data')
         path = os.path.join(path, path_suffix)
         df = pandas.read_csv(path)
         # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas
         for _, row in df.iterrows():
-            label  = row['label_vector'][:4].rstrip()  # 'none' or '%d.%d' format
+            if is_labelled:
+                label = row['label_vector'][:4].rstrip()  # 'none' or '%d.%d' format
+            else:
+                label = 'n/a'
             if skip_not_sexist and label == 'none':
                 continue
             document = row['text']
@@ -57,10 +62,12 @@ class EDOSDataset(Dataset):
             doc_id  = row['rewire_id']
             doc_idx = self.get_doc_idx(doc_id)
             self.documents.append(document)
-            self.doc2label.append(label)
-            if not label in self.labels:
-                self.labels.append(label)
+            if is_labelled:
+                self.doc2label.append(label)
+                if not label in self.labels:
+                    self.labels.append(label)
             #if self.debug: sys.stderr.write('Loaded document %s\n' %doc_id)
+        self.is_labelled = is_labelled
 
 def main():
     import argparse

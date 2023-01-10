@@ -76,9 +76,10 @@ class Item:
         return h.hexdigest()[:trim]
 
     def save_to_file(self, out):
-        out.write('with %d document(s) and label %s\n' %(
-            len(self.documents), self.label
-        ))
+        out.write('with %d document(s)' %len(self.documents))
+        if self.label:
+            out.write(' and label %s' %self.label)
+        out.write('\n')
         text, info = self.get_text_and_info()
         header = 'index\tdoc_idx\tID\ttokens\n'
         out.write(header)
@@ -230,7 +231,7 @@ class Dataset(collections.Sequence):
         assert self.fraction_of_subunits is None or self.fraction_of_subunits in (0.0, 1.0)
         assert self.number_of_subunits is None
         for doc_idx in range(len(self.documents)):
-            label = self.doc2label[doc_idx]
+            label = self.doc2label[doc_idx] if self.is_labelled else None
             for copy in range(self.items_per_unit):
                 self._add_item(Item(self, [doc_idx], label))
 
