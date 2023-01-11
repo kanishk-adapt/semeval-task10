@@ -9,6 +9,7 @@
 # Author: Joachim Wagner
 
 from collections import defaultdict
+import joblib
 from sklearn.naive_bayes import MultinomialNB
 import sys
 
@@ -24,18 +25,23 @@ def get_seed(args):
         random.seed(args.seed)
         seed = '%d' %args.seed
     else:
+        # user wants to use non-reproducible system seed
+        # --> need to derive a string seed for our functions
+        #     that use hashing to randomise data
         import base64
         import numpy
+        # get 256 bit of randomness
         seed = base64.b64encode(numpy.random.bytes(32)).decode('utf-8')
     return seed
 
 def get_training_data(args, seed):
     training_data = []
-    # allow both underscore and minus in --data-augmentation
+    # allow both underscore and minus in --augmentation
     args.augmentation = args.augmentation.replace('_', '-')
     if 'exclude-basic' not in args.augmentation:
         # usually, we include a copy of the training data as is, i.e.
-        # 1 copy of each document with no sampling of sub-units
+        # 1 copy of each document with no sampling of sub-units,
+        # unless the user specifies "exclude-basic"
         training_data.append(EDOSDataset(
             'basic:' + seed,
             args.dataset_path, args.run, args.settype + '-training',
@@ -44,11 +50,12 @@ def get_training_data(args, seed):
             number_of_subunits = None,
             deduplicate = True,
         ))
-    # support alternative delimiters in --data-augmentation
+    # support alternative delimiters in --augmentation
     for delimiter in ',| ':
         args.augmentation = args.augmentation.replace(delimiter, '+')
+    # process the list of requested data augmentations
     aug2count = defaultdict(lambda: 0)
-    for augmentation in args.data_augmentation.split('+'):
+    for augmentation in args.augmentation.split('+'):
         if augmentation in ('none', 'exclude-basic'):
             # no data to add
             continue
@@ -83,10 +90,11 @@ def get_training_data(args, seed):
             if target_size >= 1.0:
                 copies = int(target_size)  # rounding down
                 # TODO: append full copies of data
+                raise NotImplementedError
                 target_size -= copies
             if target_size > 0.0:
                 # TODO: create sample and append to data
-            raise NotImplementedError
+                raise NotImplementedError
         else:
             raise ValueError('unknown augmentation %s' %augmentation)
     if len(training_data) == 1:
@@ -96,6 +104,29 @@ def get_training_data(args, seed):
     else:
         training_data = Concat(training_data)
     return training_data
+
+def get_internal_model(args):
+    # TODO: support other choices via args
+    return MultinomialNB()
+
+def simple_tokeniser(text):
+    return text.split()
+
+def get_tokeniser(args):
+    return simple_tokeniser  # cannot use lambda here as lambda functions cannot be pickled without some extra tricks
+
+def get_ngram_range(args):
+    if not args.ngrams:
+        return None  # default: unigrams only
+    for delimiter in ',| ':  # alternative delimiters
+        args.ngrams = args.ngrams.replace(delimiter, '+')
+    values = sorted(set(map(int, args.ngrams.split('+'))))
+    return tuple(values)
+
+def get_padding(args):
+    if not args.padding or args.padding.lower() == 'none':
+        return None
+    return args.padding
 
 def main():
     import argparse
@@ -122,9 +153,9 @@ def main():
             help='Which task to train for; one of "a", "b" or "c" (default: a)',
             )
     parser.add_argument(
-            '--write_model_to', type=str, default='model-for-task-X.out',
+            '--write_model_to', type=str, default='model-for-task-%s.out',
             help='Where to write the model file '
-                 ' (default: model-for-task-X.out where X is replaced with the task code)',
+                 ' (default: model-for-task-%s.out where %s is replaced with the task code)',
             )
     parser.add_argument(
             '--run',  type=int, default=1,
@@ -140,9 +171,27 @@ def main():
                  ' (default: internal)',
             )
     parser.add_argument(
+            '--ngrams', type=str, default='1,2,3',
+            help='What values of n to use when producing n-grams as text features'
+                 ' (default: 1,2,3 = unigrams, bigrams and trigrams)',
+             )
+    parser.add_argument(
+            '--padding', type=str, default='[PAD]',
+            help='String to use as padding token; '
+                 ' the empty string or the keyword "none" de-activate padding'
+                 ' (default: [PAD])',
+            )
+    parser.add_argument(
             '--min_freq', type=int, default=5,
             help='Events must have at least this frequency to be included'
                  ' in the vocabulary (default: 5)',
+            )
+    parser.add_argument(
+            '--clip_counts', type=float, default=1.0,
+            help='Event counts are raised to the power of (1-CLIP_COUNT) to'
+                 ' obtain feature values; 0 = use counts as is; 1 = use binary'
+                 ' indicator features; 0.6667 = use cubic root'
+                 ' (default: 1 = binary features)',
             )
     print('Parsing arguments...')
     args = parser.parse_args()
@@ -151,21 +200,22 @@ def main():
     print('Dateset seed:', seed)
     training_data = get_training_data(args, seed)
     print('Number of training items:', len(training_data))
-    internal_model = MultinomialNB()
     detector = SexismDetectorWithNgrams(
             task  = args.task,
-            model = internal_model,
-            tokeniser = tokeniser,      # TODO: provide tokeniser
+            model = get_internal_model(args),
+            tokeniser = get_tokeniser(args),
             min_freq  = args.min_freq,
-            ngram_range = ngram_range,
-            padding     = padding,
+            ngram_range = get_ngram_range(args),
+            padding     = get_padding(args),
     )
     print('Training...')
     detector.train(training_data)
-    # TODO: use pickle module to save detector (not the model as it doesn't know how
-    # to map text to features and label indices to labels)
-    print('Saving model...')
-    raise NotImplementedError
+    # write model to disk
+    path = args.write_model_to %args.task
+    print('Saving model to %s...' %path)
+    # We save the detector as the model doesn't know how
+    # to map text to features and label indices to labels
+    joblib.dump(detector, path)
 
 if __name__ == '__main__':
     main()
