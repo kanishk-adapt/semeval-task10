@@ -16,6 +16,8 @@ import sys
 from basic_dataset import Concat
 from edos_dataset import EDOSDataset
 from predictor_with_ngrams import SexismDetectorWithNgrams
+from tokeniser import simple_tokeniser
+
 
 def get_seed(args):
     if args.seed:
@@ -108,9 +110,6 @@ def get_training_data(args, seed):
 def get_internal_model(args):
     # TODO: support other choices via args
     return MultinomialNB()
-
-def simple_tokeniser(text):
-    return text.split()
 
 def get_tokeniser(args):
     return simple_tokeniser  # cannot use lambda here as lambda functions cannot be pickled without some extra tricks
