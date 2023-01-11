@@ -13,8 +13,10 @@
 
 from __future__ import print_function
 
+import numpy
 from sklearn import metrics
 import sys
+import time
 
 
 fine_grained_labels = '1.1 1.2 2.1 2.2 2.3 3.1 3.2 3.3 3.4 4.1 4.2'.split()
@@ -29,6 +31,7 @@ class SexismDetector:
     def __init__(self, task = 'a', model = None):
         self.task = task
         self.model = model
+        self.progress_info = True
 
     def train(self, data_with_labels):  # sub-classes may want to add here
         # (1) get descriptive and target features
@@ -93,10 +96,17 @@ class SexismDetector:
         rows = len(data)
         features = numpy.zeros((rows, columns), dtype=dtype)
         # populate feature matrix
+        if self.progress_info: last_verbose = start_t = time.time()
         for row, item in enumerate(data):
+            if self.progress_info and time.time() > last_verbose + 3.0:
+                sys.stdout.write('%.1f%% of feature vectors extracted\r' %(100.0*row/rows))
+                last_verbose = time.time()
             vector = self.get_item_feature_vector(item)
             for column in range(columns):
                 features[row, column] = vector[column]
+        if self.progress_info:
+            sys.stdout.write('Finished extraction of feature vectors')
+            sys.stdout.write('in %.1f seconds\n' %(time.time()-start_t))
         return features
 
     def get_item_feature_vector(self, item):
