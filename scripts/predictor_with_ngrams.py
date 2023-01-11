@@ -14,6 +14,7 @@
 from __future__ import print_function
 
 from collections import defaultdict
+import numpy
 from sklearn.naive_bayes import MultinomialNB
 import sys
 
@@ -29,10 +30,14 @@ for index, label in enumerate(fine_grained_labels):
 
 class SexismDetectorWithVocab(SexismDetector):
 
-    def __init__(self, tokeniser = None, min_freq = 5, **kwargs):
-        super.__init__(self, **kwargs)
+    def __init__(self,
+        tokeniser = None, min_freq = 5, clip_counts = 1,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
         self.tokeniser = tokeniser
         self.min_freq  = min_freq
+        self.clip_counts = clip_counts
 
     def train(self, data_with_labels):
         # (1) build the vocabulary from the training data
@@ -40,11 +45,11 @@ class SexismDetectorWithVocab(SexismDetector):
         self.add_to_vocab_from_data(data_with_labels)
         self.finalise_vocab()
         # (2) extract features and train the model
-        super.train(data_with_labels)
-        
+        super().train(data_with_labels)
+
     def reset_vocab(self):
         self.vocab = defaultdict(lambda: 0)   # for each entry, record number of occurrences
-        
+
     def add_to_vocab_from_data(self, data):
         ''' expand vocabulary to cover new data '''
         for item in data:
@@ -63,7 +68,7 @@ class SexismDetectorWithVocab(SexismDetector):
         self.atom2index = {}
         for index, atom in enumerate(self.vocab):
             self.atom2index[atom] = index
-    
+
     def get_vector_length(self):  # sub-classes may want to add components for non-vocab features
         return len(self.vocab)
 
@@ -73,13 +78,20 @@ class SexismDetectorWithVocab(SexismDetector):
         vector = numpy.zeros((columns,), dtype=dtype)
         for atom in self.get_item_atoms(item):
             try:
-                index = self.token2index[atom]
+                index = self.atom2index[atom]
             except KeyError:  # token not in vocab
                 continue      # --> skip this atom
-            if self.clip_counts:
+            if self.clip_counts == 1.0:
                 vector[index] = 1
             else:
                 vector[index] += 1
+        if self.clip_counts > 0.0 and self.clip_counts < 1.0:
+            # map values in such a way that self.clip_counts close to 0
+            # behaves similarly to self.clip_counts == 0 and
+            # self.clip_counts close to 1 behaves similarly to
+            # self.clip_counts == 1
+            for column in range(columns):
+                vector[index] = vector[index] ** (1.0 - self.clip_counts)
         return vector
 
     # the following functions will have to be implemented in sub-classes
@@ -87,31 +99,28 @@ class SexismDetectorWithVocab(SexismDetector):
 
     def get_item_atoms(self, item):
         raise NotImplementedError
-    
+
 
 class SexismDetectorWithNgrams(SexismDetectorWithVocab):
 
     def __init__(self, ngram_range = None, padding = None, **kwargs):
-        super.__init__(self, **kwargs)
+        super().__init__(**kwargs)
         if not ngram_range:
             ngram_range = [1]
         self.ngram_range = ngram_range
         self.padding = padding
 
     def get_item_atoms(self, item):
-        item_tokens = tokeniser.get_tokens(item.get_text())
+        item_tokens = self.tokeniser(item.get_text())
         for n in self.ngram_range:
             assert n > 0
             tokens = item_tokens[:]
             if self.padding and n > 1:
                 n1_padding = (n-1) * [self.padding]
                 tokens = n1_padding + tokens + n1_padding
+            seq_length = len(tokens)
             start = 0
             while start < seq_length + 1 - n:
                 ngram = tokens[start:start+n]
                 yield tuple(ngram)
                 start += 1
-
-            #if self.debug: sys.stderr.write('Loaded document %s\n' %doc_id)
-        self.is_labelled = is_labelled
-
