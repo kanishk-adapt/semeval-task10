@@ -16,56 +16,7 @@ from basic_dataset import Concat
 from edos_dataset import EDOSDataset
 from predictor_with_ngrams import SexismDetectorWithNgrams
 
-def main():
-    import argparse
-    parser = argparse.ArgumentParser(description="Train a EDOS sexism detection model")
-    parser.add_argument(
-            '--seed', type=int, default=101,
-            help='Initialisation for PRNG (integer), 0 = use system seed'
-                 ' (default: 101)',
-            )
-    parser.add_argument(
-            '--dataset_path', type=str, default='data',
-            help='Where to find the EDOS data (default: data)',
-            )
-    parser.add_argument(
-            '--augmentation', type=str, default='none',
-            help='How to augment the training data;'
-                 ' space-separated list of methods;'
-                 ' include "exclude_basic" to not include'
-                 ' a copy of the basic dataset;'
-                 ' (default: none = no data augmentation)',
-            )
-    parser.add_argument(
-            '--task', type=str, default='a',
-            help='Which task to train for; one of "a", "b" or "c" (default: a)',
-            )
-    parser.add_argument(
-            '--write_model_to', type=str, default='model-for-task-X.out',
-            help='Where to write the model file '
-                 ' (default: model-for-task-X.out where X is replaced with the task code)',
-            )
-    parser.add_argument(
-            '--run',  type=int, default=1,
-            help='Cross-validation run, e.g. 1 to 5 for 5-fold;'
-                 ' ignored when training on the official training set'
-                 ' (default: 1)',
-            )
-    parser.add_argument(
-            '--settype', type=str, default='internal',
-            help='Which training set to use: internal or official;'
-                 ' "internal" uses 80%% of the official training data'
-                 ' and the run (see --run) specifies which part'
-                 ' (default: internal)',
-            )
-    parser.add_argument(
-            '--min_freq', type=int, default=5,
-            help='Events must have at least this frequency to be included'
-                 ' in the vocabulary (default: 5)',
-            )
-    print('Parsing arguments...')
-    args = parser.parse_args()
-    print('Seeding PRNGs...')
+def get_seed(args):
     if args.seed:
         import numpy
         import random
@@ -76,9 +27,9 @@ def main():
         import base64
         import numpy
         seed = base64.b64encode(numpy.random.bytes(32)).decode('utf-8')
-    print('Dateset seed:', seed)
-    #training_data = get_training_data(args)
-    #def get_training_data(args):
+    return seed
+
+def get_training_data(args, seed):
     training_data = []
     # allow both underscore and minus in --data-augmentation
     args.augmentation = args.augmentation.replace('_', '-')
@@ -144,7 +95,61 @@ def main():
         raise ValueError('When using exclude-basic, you must add at least one augmentation method')
     else:
         training_data = Concat(training_data)
+    return training_data
 
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Train a EDOS sexism detection model")
+    parser.add_argument(
+            '--seed', type=int, default=101,
+            help='Initialisation for PRNG (integer), 0 = use system seed'
+                 ' (default: 101)',
+            )
+    parser.add_argument(
+            '--dataset_path', type=str, default='data',
+            help='Where to find the EDOS data (default: data)',
+            )
+    parser.add_argument(
+            '--augmentation', type=str, default='none',
+            help='How to augment the training data;'
+                 ' space-separated list of methods;'
+                 ' include "exclude_basic" to not include'
+                 ' a copy of the basic dataset;'
+                 ' (default: none = no data augmentation)',
+            )
+    parser.add_argument(
+            '--task', type=str, default='a',
+            help='Which task to train for; one of "a", "b" or "c" (default: a)',
+            )
+    parser.add_argument(
+            '--write_model_to', type=str, default='model-for-task-X.out',
+            help='Where to write the model file '
+                 ' (default: model-for-task-X.out where X is replaced with the task code)',
+            )
+    parser.add_argument(
+            '--run',  type=int, default=1,
+            help='Cross-validation run, e.g. 1 to 5 for 5-fold;'
+                 ' ignored when training on the official training set'
+                 ' (default: 1)',
+            )
+    parser.add_argument(
+            '--settype', type=str, default='internal',
+            help='Which training set to use: internal or official;'
+                 ' "internal" uses 80%% of the official training data'
+                 ' and the run (see --run) specifies which part'
+                 ' (default: internal)',
+            )
+    parser.add_argument(
+            '--min_freq', type=int, default=5,
+            help='Events must have at least this frequency to be included'
+                 ' in the vocabulary (default: 5)',
+            )
+    print('Parsing arguments...')
+    args = parser.parse_args()
+    print('Seeding PRNGs...')
+    seed = get_seed(args)
+    print('Dateset seed:', seed)
+    training_data = get_training_data(args, seed)
     print('Number of training items:', len(training_data))
     internal_model = MultinomialNB()
     detector = SexismDetectorWithNgrams(
@@ -155,9 +160,12 @@ def main():
             ngram_range = ngram_range,
             padding     = padding,
     )
+    print('Training...')
     detector.train(training_data)
     # TODO: use pickle module to save detector (not the model as it doesn't know how
     # to map text to features and label indices to labels)
+    print('Saving model...')
+    raise NotImplementedError
 
 if __name__ == '__main__':
     main()
