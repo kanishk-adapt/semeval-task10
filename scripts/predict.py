@@ -31,7 +31,7 @@ def get_seed(args):
         seed = base64.b64encode(numpy.random.bytes(32)).decode('utf-8')
     return seed
 
-def get_test_data(args, seed):
+def get_test_data(args, seed, task = 'a'):
     return EDOSDataset(
         seed,
         args.dataset_path, args.run, args.settype,
@@ -39,6 +39,7 @@ def get_test_data(args, seed):
         fraction_of_subunits = None,
         number_of_subunits = None,
         deduplicate = False,
+        skip_not_sexist = False if task == 'a' else True
     )
 
 def main():
@@ -68,17 +69,29 @@ def main():
             )
     print('Parsing arguments...')
     args = parser.parse_args()
-    print('Seeding PRNGs...')
+    #print('Seeding PRNGs...')
     seed = get_seed(args)
-    print('Dateset seed:', seed)
-    test_data = get_test_data(args, seed)
-    print('Number of test items:', len(test_data))
     print('Loading model...')
     detector = joblib.load(args.model)
+    print('Dateset seed:', seed)
+    test_data = get_test_data(args, seed, detector.task)
+    print('Number of test items:', len(test_data))
     print('Making predictions...')
     predictions = detector.predict(test_data)
     print('Made %d prediction(s)' %len(predictions))
-    # TODO: write or print predictions in EDOS format
+    print('EDOS cvs data follows')
+    # print predictions in EDOS format
+    if detector.task == 'a':
+        print('rewire_id,label_pred')
+    else:
+        raise NotImplementedError
+    for index, item in enumerate(test_data):
+        assert len(item.documents) == 1  # no subunit sampling for test sets
+        doc_idx = item.documents[0]
+        assert doc_idx == index  # this should be true for test sets
+        doc_id = item.dataset.docs[doc_idx]
+        prediction = predictions[index]
+        print('%s,%s' %(doc_id, prediction))
 
 if __name__ == '__main__':
     main()
