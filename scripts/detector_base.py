@@ -107,7 +107,7 @@ class SexismDetector:
                 features[row, column] = vector[column]
         if self.progress_info:
             sys.stdout.write('Finished extraction of feature vectors')
-            sys.stdout.write('in %.1f seconds\n' %(time.time()-start_t))
+            sys.stdout.write(' in %.1f seconds\n' %(time.time()-start_t))
         return features
 
     def get_item_feature_vector(self, item):
