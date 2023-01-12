@@ -55,11 +55,10 @@ def main():
                  ' (default: model-for-task-a.out)',
             )
     parser.add_argument(
-            '--output', type=str, default='predictions-%x.out',
+            '--output', type=str, default='predictions-%(task)s-%(settype)s-%(rnd)x.out',
             help='Write predictions in EDOS format to this file;'
-                 ' if the name contains %%d or %%x this is replaced'
-                 ' be a 64-bit random number'
-                 ' (default: predictions-%%x.out)',
+                 ' %%(name)format can be used to access local variables;'
+                 ' (default: predictions-%%(task)s-%%(settype)s-%%(rnd)x.out)',
             )
     parser.add_argument(
             '--run',  type=int, default=1,
@@ -88,14 +87,18 @@ def main():
     print('Made %d prediction(s)' %len(predictions))
     print('EDOS cvs data follows')
     # print predictions in EDOS format
-    if '%d' in args.output or '%x' in args.output:
+    task = detector.task
+    settype = args.settype
+    if '%' in args.output:
         import random
-        args.output = args.output %random.randrange(2**64)
+        rnd = random.randrange(2**64)
+        args.output = args.output %locals()
     if args.output == '-':
         out = sys.stdout
     else:
         out = open(args.output, 'wt')
-    if detector.task == 'a':
+        print('Writing predictions to', args.output)
+    if task == 'a':
         print('rewire_id,label_pred', file=out)
     else:
         raise NotImplementedError
