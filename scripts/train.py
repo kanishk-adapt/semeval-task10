@@ -15,7 +15,7 @@ import sys
 
 from basic_dataset import Concat
 from edos_dataset import EDOSDataset
-from predictor_with_ngrams import SexismDetectorWithNgrams
+from detector_with_ngrams import SexismDetectorWithNgrams
 from tokeniser import simple_tokeniser
 
 
@@ -154,7 +154,7 @@ def main():
     parser.add_argument(
             '--write_model_to', type=str, default='model-for-task-%s.out',
             help='Where to write the model file '
-                 ' (default: model-for-task-%s.out where %s is replaced with the task code)',
+                 ' (default: model-for-task-%%s.out where %%s is replaced with the task code)',
             )
     parser.add_argument(
             '--run',  type=int, default=1,

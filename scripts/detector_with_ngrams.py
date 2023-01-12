@@ -18,7 +18,7 @@ import numpy
 from sklearn.naive_bayes import MultinomialNB
 import sys
 
-from predictor_interface import SexismDetector
+from detector_base import SexismDetector
 
 
 fine_grained_labels = '1.1 1.2 2.1 2.2 2.3 3.1 3.2 3.3 3.4 4.1 4.2'.split()
