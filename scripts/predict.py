@@ -55,6 +55,13 @@ def main():
                  ' (default: model-for-task-a.out)',
             )
     parser.add_argument(
+            '--output', type=str, default='predictions-%x.out',
+            help='Write predictions in EDOS format to this file;'
+                 ' if the name contains %%d or %%x this is replaced'
+                 ' be a 64-bit random number'
+                 ' (default: predictions-%%x.out)',
+            )
+    parser.add_argument(
             '--run',  type=int, default=1,
             help='Cross-validation run, e.g. 1 to 5 for 5-fold;'
                  ' ignored when testing on an official dev or test set'
@@ -81,8 +88,15 @@ def main():
     print('Made %d prediction(s)' %len(predictions))
     print('EDOS cvs data follows')
     # print predictions in EDOS format
+    if '%d' in args.output or '%x' in args.output:
+        import random
+        args.output = args.output %random.randrange(2**64)
+    if args.output == '-':
+        out = sys.stdout
+    else:
+        out = open(args.output, 'wt')
     if detector.task == 'a':
-        print('rewire_id,label_pred')
+        print('rewire_id,label_pred', file=out)
     else:
         raise NotImplementedError
     for index, item in enumerate(test_data):
@@ -91,7 +105,9 @@ def main():
         assert doc_idx == index  # this should be true for test sets
         doc_id = item.dataset.docs[doc_idx]
         prediction = predictions[index]
-        print('%s,%s' %(doc_id, prediction))
+        print('%s,%s' %(doc_id, prediction), file=out)
+    if args.output != '-':
+        out.close()
 
 if __name__ == '__main__':
     main()
