@@ -32,6 +32,7 @@ class SexismDetector:
         self.task = task
         self.model = model
         self.progress_info = True
+        self.debug = False
 
     def train(self, data_with_labels):  # sub-classes may want to add here
         # (1) get descriptive and target features
@@ -55,9 +56,9 @@ class SexismDetector:
         y_pred = self.model.predict(features)
         # restore labels
         labels = []
-        for label_idx in y_pred:
+        for row, label_idx in enumerate(y_pred):
             if self.task == 'a':
-                label = 'yes' if label_idx else 'none'
+                label = 'sexist' if label_idx else 'not sexist'
             elif self.task == 'b':
                 label = '%d' %(label_idx + 1)
             elif self.task == 'c':
@@ -119,7 +120,7 @@ class SexismDetector:
         # prepare target vector
         targets = numpy.zeros(len(data), dtype=numpy.int8)
         for index, item in enumerate(data):
-            label == item.label
+            label = item.label
             if label == 'none':
                 assert self.task == 'a'  # for tasks b and c, "none" items must not be in the data
                 # nothing else to do as array is populated with zeroes above

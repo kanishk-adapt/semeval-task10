@@ -66,7 +66,8 @@ class EDOSDataset(Dataset):
                 self.doc2label.append(label)
                 if not label in self.labels:
                     self.labels.append(label)
-            #if self.debug: sys.stderr.write('Loaded document %s\n' %doc_id)
+            if self.debug:
+                sys.stderr.write('Loaded document %s with label %s\n' %(doc_id, label))
         self.is_labelled = is_labelled
 
 def main():

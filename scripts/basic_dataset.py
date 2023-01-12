@@ -108,6 +108,7 @@ class Dataset(collections.Sequence):
     def __init__(self, seed = None,
         path = None, run = 1, settype = 'test',
         skip_not_sexist = False,
+        debug = False,
         **kwargs   # see set_mode()
     ):
 
@@ -131,7 +132,7 @@ class Dataset(collections.Sequence):
             seed = ''
         self.seed = seed.encode('utf-8')
         self.frozen = False
-        self.debug  = True
+        self.debug  = debug
         self.set_mode(**kwargs)
         if path:
             self.load_from_path(path, run, settype, skip_not_sexist)
