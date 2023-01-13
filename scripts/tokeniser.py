@@ -8,10 +8,25 @@
 
 # Author: Joachim Wagner
 
+from nltk.tokenize import word_tokenize
+from gensim.utils import tokenize
 import sys
 
 def simple_tokeniser(text):
     return text.split()
 
-# TODO: add a tokeniser that splits off punctuation and symbols
-#       and maybe also a BERT-like tokeniser
+nltk_tokeniser = word_tokenize
+
+def gensim_tokeniser(text):
+    return list(tokenize(text))
+
+spacy_nlp = None
+
+def spacy_tokeniser(text):
+    global spacy_nlp
+    if spacy_nlp is None:
+        from spacy.lang.en import English
+        spacy_nlp = English()
+    return [x.text for x in spacy_nlp(text)]
+
+# TODO: add a BERT-like tokeniser
