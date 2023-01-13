@@ -16,7 +16,8 @@ import sys
 from basic_dataset import Concat
 from edos_dataset import EDOSDataset
 from detector_with_ngrams import SexismDetectorWithNgrams
-from tokeniser import simple_tokeniser
+from tokeniser import simple_tokeniser, nltk_tokeniser, spacy_tokeniser, \
+                      gensim_tokeniser
 
 
 def get_seed(args):
@@ -112,7 +113,16 @@ def get_internal_model(args):
     return MultinomialNB()
 
 def get_tokeniser(args):
-    return simple_tokeniser  # cannot use lambda here as lambda functions cannot be pickled without some extra tricks
+    if args.tokeniser == 'simple':
+        return simple_tokeniser  # cannot use lambda here as lambda functions cannot be pickled without some extra tricks
+    elif args.tokeniser == 'nltk':
+        return nltk_tokeniser
+    elif args.tokeniser == 'spacy':
+        return spacy_tokeniser
+    elif args.tokeniser == 'gensim':
+        return gensim_tokeniser
+    else:
+        raise ValueError('unknown tokeniser %s' %args.tokeniser)
 
 def get_ngram_range(args):
     if not args.ngrams:
@@ -168,6 +178,11 @@ def main():
                  ' "internal" uses 80%% of the official training data'
                  ' and the run (see --run) specifies which part'
                  ' (default: internal)',
+            )
+    parser.add_argument(
+            '--tokeniser', type=str, default='nltk',
+            help='What tokeniser to use; one of simple, nltk, spacy or gensim'
+                 ' (default: nltk)',
             )
     parser.add_argument(
             '--ngrams', type=str, default='1,2,3',
