@@ -55,10 +55,10 @@ def main():
                  ' (default: model-for-task-a.out)',
             )
     parser.add_argument(
-            '--output', type=str, default='predictions-%(task)s-%(settype)s-%(rnd)x.out',
+            '--output', type=str, default='predictions-%(task)s-%(settype)s-%(rnd)x.csv',
             help='Write predictions in EDOS format to this file;'
                  ' %%(name)format can be used to access local variables;'
-                 ' (default: predictions-%%(task)s-%%(settype)s-%%(rnd)x.out)',
+                 ' (default: predictions-%%(task)s-%%(settype)s-%%(rnd)x.csv)',
             )
     parser.add_argument(
             '--run',  type=int, default=1,
