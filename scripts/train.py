@@ -10,7 +10,9 @@
 
 from collections import defaultdict
 import joblib
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import MultinomialNB, ComplementNB, BernoulliNB
+from sklearn.tree import DecisionTreeClassifier
 import sys
 
 from basic_dataset import Concat
@@ -109,8 +111,26 @@ def get_training_data(args, seed):
     return training_data
 
 def get_internal_model(args):
-    # TODO: support other choices via args
-    return MultinomialNB()
+    if args.classifier == 'MultinomialNB':
+        return MultinomialNB(fit_prior = not args.uniform_prior)
+    elif args.classifier == 'ComplementNB':
+        return ComplementNB(fit_prior = not args.uniform_prior)
+    elif args.classifier == 'BernoulliNB':
+        return BernoulliNB(fit_prior = not args.uniform_prior)
+    elif args.classifier == 'DecisionTree':
+        return DecisionTreeClassifier()
+    elif args.classifier == 'DecisionTreeM10':
+        return DecisionTreeClassifier(min_samples_leaf = 10)
+    elif args.classifier == 'DecisionTreeM50':
+        return DecisionTreeClassifier(min_samples_leaf = 50)
+    elif args.classifier == 'RandomForest':
+        return RandomForestClassifier()
+    elif args.classifier == 'RandomForestM10':  # TODO: add option to control min_samples_leaf
+        return RandomForestClassifier(min_samples_leaf = 10)
+    elif args.classifier == 'RandomForestM50':
+        return RandomForestClassifier(min_samples_leaf = 50)
+    else:
+        raise ValueError('unknown classifier %s' %args.classifier)
 
 def get_tokeniser(args):
     if args.tokeniser == 'simple':
@@ -180,9 +200,9 @@ def main():
                  ' (default: internal)',
             )
     parser.add_argument(
-            '--tokeniser', type=str, default='nltk',
+            '--tokeniser', type=str, default='gensim',
             help='What tokeniser to use; one of simple, nltk, spacy or gensim'
-                 ' (default: nltk)',
+                 ' (default: gensim)',
             )
     parser.add_argument(
             '--ngrams', type=str, default='1,2,3',
@@ -196,9 +216,9 @@ def main():
                  ' (default: [PAD])',
             )
     parser.add_argument(
-            '--min_freq', type=int, default=5,
+            '--min_freq', type=int, default=8,
             help='Events must have at least this frequency to be included'
-                 ' in the vocabulary (default: 5)',
+                 ' in the vocabulary (default: 8)',
             )
     parser.add_argument(
             '--clip_counts', type=float, default=1.0,
@@ -207,6 +227,28 @@ def main():
                  ' indicator features; 0.6667 = use cubic root'
                  ' (default: 1 = binary features)',
             )
+    parser.add_argument(
+            '--classifier', type=str, default='DecisionTreeM10',
+            help='What classifier to use. One of'
+                 ' BernoulliNB,'
+                 ' ComplementNB,'
+                 ' DecisionTree,'
+                 ' DecisionTreeM10 (min_samples_leaf=10),'
+                 ' DecisionTreeM50 (min_samples_leaf=50),'
+                 ' MultinomialNB,'
+                 ' RandomForest',)
+                 ' RandomForestM10 (min_samples_leaf=10',)
+                 ' RandomForestM50 (min_samples_leaf=50',)
+                 ' RandomForest',)
+                 ' (default: DecisionTreeM10)',
+            )
+    parser.add_argument(
+            '--uniform_prior', action='store_true',
+            help='Use uniform prior with NaiveBayes'
+                 ' (default is to fit prior to training data)',
+            )
+    parser.set_defaults(uniform_priors=False)
+
     print('Parsing arguments...')
     args = parser.parse_args()
     print('Seeding PRNGs...')
