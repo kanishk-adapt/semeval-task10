@@ -15,6 +15,19 @@ shared task.
 
 ## Pre-requisites
 
+Python3 modules:
+gensim
+nltk 
+numpy
+pandas
+scikit-learn
+spacy (only needed if requesting its tokeniser with `--tokeniser`)
+
+NLTK asks to further run inside python:
+```
+import nltk
+nltk.download('punkt')
+```
 
 ## Installation
 
