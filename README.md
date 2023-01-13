@@ -29,6 +29,13 @@ import nltk
 nltk.download('punkt')
 ```
 
+Spacy instructions say to run
+```
+python -m spacy download en_core_web_sm
+```
+TODO: do we need this model? We only use the tokeniser.
+
+
 ## Installation
 
 
