@@ -279,7 +279,14 @@ def main():
         print('Saving features to %s...' %args.write_features_to)
         joblib.dump(features, args.write_features_to)
     # write model to disk
-    path = args.write_model_to %args.task
+    if '%s' in args.write_model_to:
+        path = args.write_model_to %args.task
+    elif not args.write_model_to:
+        # user set output name to the empty string
+        # --> user doesn't want to save the model
+        sys.exit(0)
+    else:
+        path = args.write_model_to
     print('Saving model to %s...' %path)
     # We save the detector as the model doesn't know how
     # to map text to features and label indices to labels
