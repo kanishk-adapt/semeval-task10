@@ -40,6 +40,8 @@ def get_seed(args):
     return seed
 
 def get_training_data(args, seed):
+    if args.settype in ('internal', 'official'):
+        args.settype = args.settype + '-training'
     training_data = []
     # allow both underscore and minus in --augmentation
     args.augmentation = args.augmentation.replace('_', '-')
@@ -49,7 +51,7 @@ def get_training_data(args, seed):
         # unless the user specifies "exclude-basic"
         training_data.append(EDOSDataset(
             'basic:' + seed,
-            args.dataset_path, args.run, args.settype + '-training',
+            args.dataset_path, args.run, args.settype,
             unit = 'document', items_per_unit = 1,
             fraction_of_subunits = None,
             number_of_subunits = None,
@@ -201,7 +203,9 @@ def main():
             '--settype', type=str, default='internal',
             help='Which training set to use: internal or official;'
                  ' "internal" uses 80%% of the official training data'
-                 ' and the run (see --run) specifies which part'
+                 ' and the run (see --run) specifies which part;'
+                 ' can also use dev and test sets,'
+                 ' e.g. for feature extraction'
                  ' (default: internal)',
             )
     parser.add_argument(
@@ -291,6 +295,8 @@ def main():
     # We save the detector as the model doesn't know how
     # to map text to features and label indices to labels
     joblib.dump(detector, path)
+    if '-dev' in args.settype or '-test' in args.settype:
+        print('Warning: model has been trained on dev or test data')
 
 if __name__ == '__main__':
     main()
