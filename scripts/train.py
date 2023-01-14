@@ -78,7 +78,7 @@ def get_training_data(args, seed):
             assert fields[5] == 'documents'
             training_data.append(EDOSDataset(
                 '%s:%d:%s' %(augmentation, a_seq, seed),
-                args.dataset_path, args.run, args.settype + '-training',
+                args.dataset_path, args.run, args.settype,
                 unit = 'class', items_per_unit = int(fields[0]),
                 fraction_of_subunits = None,
                 number_of_subunits = int(fields[4]),
