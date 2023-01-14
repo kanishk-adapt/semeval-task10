@@ -34,7 +34,7 @@ class SexismDetector:
         self.progress_info = True
         self.debug = False
 
-    def train(self, data_with_labels):  # sub-classes may want to add here
+    def train(self, data_with_labels, get_features = False):  # sub-classes may want to add here
         # (1) get descriptive and target features
         tr_features = self.extract_features(
             data_with_labels
@@ -42,6 +42,9 @@ class SexismDetector:
         tr_targets = self.get_targets(data_with_labels)
         # (2) train the core model
         self.train_model_on_features(tr_features, tr_targets)
+        if get_features:
+            return tr_features
+        return None
 
     def train_model_on_features(self, tr_features, tr_targets):
         # pass numpy array to sklearn to train self.model

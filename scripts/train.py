@@ -187,6 +187,11 @@ def main():
                  ' (default: model-for-task-%%s.out where %%s is replaced with the task code)',
             )
     parser.add_argument(
+            '--write_features_to', type=str, default='',
+            help='Whether and where to write the feature matrix '
+                 ' (default: do not write features to disk)',
+            )
+    parser.add_argument(
             '--run',  type=int, default=1,
             help='Cross-validation run, e.g. 1 to 5 for 5-fold;'
                  ' ignored when training on the official training set'
@@ -236,10 +241,10 @@ def main():
                  ' DecisionTreeM10 (min_samples_leaf=10),'
                  ' DecisionTreeM50 (min_samples_leaf=50),'
                  ' MultinomialNB,'
-                 ' RandomForest',)
-                 ' RandomForestM10 (min_samples_leaf=10',)
-                 ' RandomForestM50 (min_samples_leaf=50',)
-                 ' RandomForest',)
+                 ' RandomForest,'
+                 ' RandomForestM10 (min_samples_leaf=10,'
+                 ' RandomForestM50 (min_samples_leaf=50,'
+                 ' RandomForest'
                  ' (default: DecisionTreeM10)',
             )
     parser.add_argument(
@@ -265,7 +270,14 @@ def main():
             padding     = get_padding(args),
     )
     print('Training...')
-    detector.train(training_data)
+    features = detector.train(
+        training_data,
+        get_features = args.write_features_to
+    )
+    if args.write_features_to:
+        # write features to disk
+        print('Saving features to %s...' %args.write_features_to)
+        joblib.dump(features, args.write_features_to)
     # write model to disk
     path = args.write_model_to %args.task
     print('Saving model to %s...' %path)

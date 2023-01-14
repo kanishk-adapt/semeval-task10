@@ -39,13 +39,13 @@ class SexismDetectorWithVocab(SexismDetector):
         self.min_freq  = min_freq
         self.clip_counts = clip_counts
 
-    def train(self, data_with_labels):
+    def train(self, data_with_labels, **kwargs):
         # (1) build the vocabulary from the training data
         self.reset_vocab()
         self.add_to_vocab_from_data(data_with_labels)
         self.finalise_vocab()
         # (2) extract features and train the model
-        super().train(data_with_labels)
+        return super().train(data_with_labels, **kwargs)
 
     def reset_vocab(self):
         self.vocab = defaultdict(lambda: 0)   # for each entry, record number of occurrences
