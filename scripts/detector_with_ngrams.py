@@ -53,8 +53,8 @@ class SexismDetectorWithVocab(SexismDetector):
     def add_to_vocab_from_data(self, data):
         ''' expand vocabulary to cover new data '''
         for item in data:
-            for atom in self.get_item_atoms(item):
-                self.vocab[atom] += 1
+            for event in self.get_item_events(item):
+                self.vocab[event] += 1
 
     def finalise_vocab(self):
         ''' finish creating the vocaulary and create support structures '''
@@ -65,9 +65,9 @@ class SexismDetectorWithVocab(SexismDetector):
                 selected_vocab.append(entry)
         self.vocab = sorted(selected_vocab)
         # create reverse map for fast token lookup
-        self.atom2index = {}
-        for index, atom in enumerate(self.vocab):
-            self.atom2index[atom] = index
+        self.event2index = {}
+        for index, event in enumerate(self.vocab):
+            self.event2index[event] = index
 
     def get_vector_length(self):  # sub-classes may want to add components for non-vocab features
         return len(self.vocab)
@@ -76,11 +76,11 @@ class SexismDetectorWithVocab(SexismDetector):
         columns = self.get_vector_length()
         dtype   = self.get_vector_dtype()
         vector = numpy.zeros((columns,), dtype=dtype)
-        for atom in self.get_item_atoms(item):
+        for event in self.get_item_events(item):
             try:
-                index = self.atom2index[atom]
+                index = self.event2index[event]
             except KeyError:  # token not in vocab
-                continue      # --> skip this atom
+                continue      # --> skip this event
             if self.clip_counts == 1.0:
                 vector[index] = 1
             else:
@@ -97,7 +97,7 @@ class SexismDetectorWithVocab(SexismDetector):
     # the following functions will have to be implemented in sub-classes
     # to be able to use above functionality
 
-    def get_item_atoms(self, item):
+    def get_item_events(self, item):
         raise NotImplementedError
 
 
@@ -110,7 +110,7 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
         self.ngram_range = ngram_range
         self.padding = padding
 
-    def get_item_atoms(self, item):
+    def get_item_events(self, item):
         item_tokens = self.tokeniser(item.get_text())
         for n in self.ngram_range:
             assert n > 0
