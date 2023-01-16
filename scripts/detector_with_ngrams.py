@@ -38,6 +38,16 @@ class SexismDetectorWithVocab(SexismDetector):
         self.tokeniser = tokeniser
         self.min_freq  = min_freq
         self.clip_counts = clip_counts
+        self.use_truecase = True
+        self.use_lowercase = True
+        self.tag_combinations = [
+            ('p',) ('d',) ('s',)
+            ('p', 'd'), ('p', 's'), ('d', 's'),
+            ('p', 'd', 's'),
+            ('t', 'p',) ('t', 'd',) ('t', 's',)
+            ('t', 'p', 'd'), ('t', 'p', 's'), ('t', 'd', 's'),
+            ('t', 'p', 'd', 's'),
+        ]
 
     def train(self, data_with_labels, **kwargs):
         # (1) build the vocabulary from the training data
@@ -111,7 +121,11 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
         self.padding = padding
 
     def get_item_events(self, item):
-        item_tokens = self.tokeniser(item.get_text())
+        for tag_name, sequence in self.get_item_sequences(item):
+            for event in self.get_squence_events(sequence, tag_name):
+                yield event
+
+    def get_squence_events(self, item_tokens, tag_name):
         for n in self.ngram_range:
             assert n > 0
             tokens = item_tokens[:]
@@ -121,6 +135,19 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
             seq_length = len(tokens)
             start = 0
             while start < seq_length + 1 - n:
-                ngram = tokens[start:start+n]
-                yield tuple(ngram)
+                ngram = ['%s:%d' %(tag_name, n)] + tokens[start:start+n]
+                yield ' '.join(ngram)
                 start += 1
+
+    def get_item_sequences(self, item):
+        if self.use_truecase:
+            yield ('TT', self.tokeniser(item.get_text()))
+        if self.use_lowercase:
+            yield ('TL', self.tokeniser(item.get_text().lower()))
+        if self.item.dataset.tags:
+            for tag_combination in self.tag_combinations:
+                tag_combo_name = '+'.join(tag_combination)
+                sequence = item.get_tags(tag_combination)
+                yield (tag_combo_name, sequence)
+        elif self.tag_combinations:
+            raise ValueError('Requested tag-based features but tags not loaded')
