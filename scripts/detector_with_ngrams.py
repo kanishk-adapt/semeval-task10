@@ -41,12 +41,12 @@ class SexismDetectorWithVocab(SexismDetector):
         self.use_truecase = True
         self.use_lowercase = True
         self.tag_combinations = [
-            ('p',) ('d',) ('s',)
-            ('p', 'd'), ('p', 's'), ('d', 's'),
-            ('p', 'd', 's'),
-            ('t', 'p',) ('t', 'd',) ('t', 's',)
-            ('t', 'p', 'd'), ('t', 'p', 's'), ('t', 'd', 's'),
-            ('t', 'p', 'd', 's'),
+            ('p',), ('d',), ('s',),
+            #('p', 'd'), ('p', 's'), ('d', 's'),
+            #('p', 'd', 's'),
+            #('t', 'p',), ('t', 'd',), ('t', 's',),
+            #('t', 'p', 'd'), ('t', 'p', 's'), ('t', 'd', 's'),
+            #('t', 'p', 'd', 's'),
         ]
 
     def train(self, data_with_labels, **kwargs):
@@ -144,7 +144,7 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
             yield ('TT', self.tokeniser(item.get_text()))
         if self.use_lowercase:
             yield ('TL', self.tokeniser(item.get_text().lower()))
-        if self.item.dataset.tags:
+        if item.dataset.tags and self.tag_combinations:
             for tag_combination in self.tag_combinations:
                 tag_combo_name = '+'.join(tag_combination)
                 sequence = item.get_tags(tag_combination)
