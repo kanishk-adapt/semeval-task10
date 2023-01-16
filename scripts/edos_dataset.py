@@ -46,8 +46,8 @@ class EDOSDataset(Dataset):
             path_suffix = path_suffix %run
         if skip_not_sexist and not is_labelled:
             raise ValueError('Cannot skip non-sexists items in unlabelled data')
-        path = os.path.join(path, path_suffix)
-        df = pandas.read_csv(path)
+        data_path = os.path.join(path, path_suffix)
+        df = pandas.read_csv(data_path)
         # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas
         for _, row in df.iterrows():
             if is_labelled:
@@ -69,6 +69,62 @@ class EDOSDataset(Dataset):
             if self.debug:
                 sys.stderr.write('Loaded document %s with label %s\n' %(doc_id, label))
         self.is_labelled = is_labelled
+        # load POS and deprel features
+        features_path = os.path.join(path, 'dep-pos', 'extracted_features.csv')
+        tag_names = 'token pos_tag dep_tag sentiment'.split()
+        if os.path.exists(features_path):
+            df = pandas.read_csv(features_path)
+            last_doc_id = None
+            doc_tags = {}
+            all_tags = []
+            for _, row in df.iterrows():
+                #print('F row', row)
+                doc_id = row['rewire_id']
+                if doc_id != last_doc_id and last_doc_id is not None:
+                    self.add_doc_tags(all_tags, doc_tags)
+                    doc_tags = {}
+                if doc_tags:
+                    # consistency check
+                    assert doc_tags['doc_id'] == doc_id
+                else:
+                    # initialise doc_tags
+                    doc_tags['doc_id'] = doc_id
+                    for tag_name in tag_names:
+                        doc_tags[tag_name] = []
+                # update doc_tags with new row
+                for tag_name in tag_names:
+                    doc_tags[tag_name].append(row[tag_name])
+                # prepare for next row
+                last_doc_id = doc_id
+            # complete last item
+            if doc_tags:
+                self.add_doc_tags(all_tags, doc_tags)
+            # check all training items are covered
+            # (add_doc_tags() has rejected items outside our
+            # dataset, so we only need to check the number
+            # of items is correct)
+            if len(all_tags) == len(self.documents):
+                all_tags.sort()
+                assert all_tags[0][0] == 0
+                assert all_tags[-1][0] == len(all_tags) - 1
+                # strip index numbers from list
+                self.tags = list(map(lambda x: x[1], all_tags))
+            else:
+                sys.stderr.write('Warning: ignoring %s as it does not cover all of %s\n' %(
+                    features_path, data_path
+                ))
+        else:
+            sys.stderr.write('Warning: dep-pos features not found\n')
+            self.tags = None
+
+    def add_doc_tags(self, all_tags, doc_tags):
+        doc_id = doc_tags['doc_id']
+        del doc_tags['doc_id']
+        if not doc_id in self.doc2idx:
+            return
+        doc_idx = self.doc2idx[doc_id]
+        all_tags.append((doc_idx, doc_tags))
+
 
 def main():
     import argparse
