@@ -116,6 +116,9 @@ class SexismDetector:
     def get_item_feature_vector(self, item):
         raise NotImplementedError
 
+    def get_feature_matrix_column_names(self):
+        raise NotImplementedError
+
     def get_targets(self, data):
         ''' create column vector with target labels
         '''

@@ -97,6 +97,12 @@ class SexismDetectorWithVocab(SexismDetector):
                 vector[index] = vector[index] ** (1.0 - self.clip_counts)
         return vector
 
+    def get_feature_matrix_column_names(self):
+        # self.vocab determines the position of each feature in
+        # get_item_feature_vector() above
+        # --> the list of features is self.vocab
+        return self.vocab
+
     # the following functions will have to be implemented in sub-classes
     # to be able to use above functionality
 

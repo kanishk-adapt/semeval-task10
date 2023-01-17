@@ -194,6 +194,11 @@ def main():
                  ' (default: do not write features to disk)',
             )
     parser.add_argument(
+            '--write_column_names_to', type=str, default='',
+            help='Whether and where to write the column names of the feature matrix '
+                 ' (default: do not write column names to disk)',
+            )
+    parser.add_argument(
             '--run',  type=int, default=1,
             help='Cross-validation run, e.g. 1 to 5 for 5-fold;'
                  ' ignored when training on the official training set'
@@ -311,6 +316,15 @@ def main():
         # write features to disk
         print('Saving features to %s...' %args.write_features_to)
         joblib.dump(features, args.write_features_to)
+    if args.write_column_names_to:
+         # write column maes to disk
+         print('Saving column names to %s...' %args.write_column_names_to)
+         f = open(args.write_column_names_to, 'wt')
+         f.write('feature_matrix_column_name\n')
+         for col_name in detector.get_feature_matrix_column_names():
+             f.write(col_name)
+             f.write('\n')
+         f.close()
     # write model to disk
     if '%s' in args.write_model_to:
         path = args.write_model_to %args.task
