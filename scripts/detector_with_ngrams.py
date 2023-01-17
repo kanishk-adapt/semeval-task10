@@ -53,8 +53,8 @@ class SexismDetectorWithVocab(SexismDetector):
     def add_to_vocab_from_data(self, data):
         ''' expand vocabulary to cover new data '''
         for item in data:
-            for atom in self.get_item_atoms(item):
-                self.vocab[atom] += 1
+            for event in self.get_item_events(item):
+                self.vocab[event] += 1
 
     def finalise_vocab(self):
         ''' finish creating the vocaulary and create support structures '''
@@ -65,9 +65,9 @@ class SexismDetectorWithVocab(SexismDetector):
                 selected_vocab.append(entry)
         self.vocab = sorted(selected_vocab)
         # create reverse map for fast token lookup
-        self.atom2index = {}
-        for index, atom in enumerate(self.vocab):
-            self.atom2index[atom] = index
+        self.event2index = {}
+        for index, event in enumerate(self.vocab):
+            self.event2index[event] = index
 
     def get_vector_length(self):  # sub-classes may want to add components for non-vocab features
         return len(self.vocab)
@@ -76,42 +76,60 @@ class SexismDetectorWithVocab(SexismDetector):
         columns = self.get_vector_length()
         dtype   = self.get_vector_dtype()
         vector = numpy.zeros((columns,), dtype=dtype)
-        for atom in self.get_item_atoms(item):
+        non_zero_columns = set()
+        for event in self.get_item_events(item):
             try:
-                index = self.atom2index[atom]
+                index = self.event2index[event]
             except KeyError:  # token not in vocab
-                continue      # --> skip this atom
+                continue      # --> skip this event
             if self.clip_counts == 1.0:
                 vector[index] = 1
             else:
                 vector[index] += 1
+            non_zero_columns.add(index)
         if self.clip_counts > 0.0 and self.clip_counts < 1.0:
             # map values in such a way that self.clip_counts close to 0
             # behaves similarly to self.clip_counts == 0 and
             # self.clip_counts close to 1 behaves similarly to
             # self.clip_counts == 1
-            for column in range(columns):
+            #for column in range(columns):  # TODO: usually, there are only a few non-zero columns
+            for column in non_zero_columns:
                 vector[index] = vector[index] ** (1.0 - self.clip_counts)
         return vector
 
     # the following functions will have to be implemented in sub-classes
     # to be able to use above functionality
 
-    def get_item_atoms(self, item):
+    def get_item_events(self, item):
         raise NotImplementedError
 
 
 class SexismDetectorWithNgrams(SexismDetectorWithVocab):
 
-    def __init__(self, ngram_range = None, padding = None, **kwargs):
+    def __init__(self,
+        ngram_range = None, padding = None,
+        use_truecase = True, use_lowercase = True,
+        tag_combinations = 'p,d,s,tp,pd',
+        **kwargs
+    ):
         super().__init__(**kwargs)
         if not ngram_range:
             ngram_range = [1]
         self.ngram_range = ngram_range
         self.padding = padding
+        self.use_truecase = True
+        self.use_lowercase = True
+        self.tag_combinations = []
+        for tag_combination in tag_combinations.split(','):
+            # expand e.g. 'pd' to ('p', 'd')
+            self.tag_combinations.append(tuple(tag_combination))
 
-    def get_item_atoms(self, item):
-        item_tokens = self.tokeniser(item.get_text())
+    def get_item_events(self, item):
+        for tag_name, sequence in self.get_item_sequences(item):
+            for event in self.get_squence_events(sequence, tag_name):
+                yield event
+
+    def get_squence_events(self, item_tokens, tag_name):
         for n in self.ngram_range:
             assert n > 0
             tokens = item_tokens[:]
@@ -121,6 +139,19 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
             seq_length = len(tokens)
             start = 0
             while start < seq_length + 1 - n:
-                ngram = tokens[start:start+n]
-                yield tuple(ngram)
+                ngram = ['%s:%d' %(tag_name, n)] + tokens[start:start+n]
+                yield ' '.join(ngram)
                 start += 1
+
+    def get_item_sequences(self, item):
+        if self.use_truecase:
+            yield ('TT', self.tokeniser(item.get_text()))
+        if self.use_lowercase:
+            yield ('TL', self.tokeniser(item.get_text().lower()))
+        if item.dataset.tags and self.tag_combinations:
+            for tag_combination in self.tag_combinations:
+                tag_combo_name = '+'.join(tag_combination)
+                sequence = item.get_tags(tag_combination)
+                yield (tag_combo_name, sequence)
+        elif self.tag_combinations:
+            raise ValueError('Requested tag-based features but tags not loaded')

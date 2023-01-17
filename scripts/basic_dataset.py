@@ -22,6 +22,13 @@ import random
 import sys
 import time
 
+short2long_tag_name = {
+    't': 'token',
+    'p': 'pos_tag',
+    'd': 'dep_tag',
+    's': 'sentiment',
+}
+
 
 class Item:
 
@@ -65,6 +72,28 @@ class Item:
         for _, n in self.get_text_and_info(get_text = False):
             count += n
         return count
+
+    def get_tags(self, tag_combination):
+        retval = []
+        for doc_idx in self.documents:
+            doc_tags = self.dataset.tags[doc_idx]
+            retval += self.get_document_tags(doc_tags, tag_combination)
+        return retval
+
+    def get_document_tags(self, doc_tags, tag_combination):
+        global short2long_tag_name
+        exp_doc_tags = {}
+        for tag_name in tag_combination:
+            long_tag_name = short2long_tag_name[tag_name]
+            exp_doc_tags[tag_name] = doc_tags[long_tag_name].split(' ')
+        n_tags = len(exp_doc_tags[tag_combination[0]])
+        retval = []
+        for index in range(n_tags):
+            comb_tag = []
+            for tag_name in tag_combination:
+                comb_tag.append(exp_doc_tags[tag_name][index])
+            retval.append(' '.join(comb_tag))
+        return retval
 
     def hexdigest(self, trim = None):
         if not trim:

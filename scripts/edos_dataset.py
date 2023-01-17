@@ -15,6 +15,7 @@ from basic_dataset import Dataset, Item
 import pandas
 import os
 import sys
+from tqdm import tqdm
 
 settype2setting = {
     # dataset name --> path suffix, is_labelled, cross-validation
@@ -46,10 +47,13 @@ class EDOSDataset(Dataset):
             path_suffix = path_suffix %run
         if skip_not_sexist and not is_labelled:
             raise ValueError('Cannot skip non-sexists items in unlabelled data')
-        path = os.path.join(path, path_suffix)
-        df = pandas.read_csv(path)
+        data_path = os.path.join(path, path_suffix)
+        # https://stackoverflow.com/questions/16988526/pandas-reading-csv-as-string-type
+        # needed for text "nan" as in "love my nan, mum and sister" not the be mapped
+        # to special float NaN (not a number)
+        df = pandas.read_csv(data_path, dtype=str, na_filter=False)
         # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas
-        for _, row in df.iterrows():
+        for _, row in tqdm(df.iterrows(), total=df.shape[0], desc='Loading data'):  # https://stackoverflow.com/questions/47087741/use-tqdm-progress-bar-with-pandas
             if is_labelled:
                 label = row['label_vector'][:4].rstrip()  # 'none' or '%d.%d' format
             else:
@@ -69,6 +73,118 @@ class EDOSDataset(Dataset):
             if self.debug:
                 sys.stderr.write('Loaded document %s with label %s\n' %(doc_id, label))
         self.is_labelled = is_labelled
+        # load POS and deprel features
+        features_path = os.path.join(path, 'dep-pos', 'extracted_features.csv')
+        fast_features_path = os.path.join(  # e.g. extracted_features-k8020-dev-run-1.csv
+            path, 'dep-pos', 'extracted_features-%s' %path_suffix
+        )
+        tag_names = 'token pos_tag dep_tag sentiment'.split()
+        if os.path.exists(fast_features_path):
+            df = pandas.read_csv(fast_features_path, dtype=str, na_filter=False)
+            save_ffp = False
+        elif os.path.exists(features_path):
+            df = pandas.read_csv(features_path, dtype=str, na_filter=False)
+            save_ffp = True
+        else:
+            df = None
+            sys.stderr.write('Warning: dep-pos features not found\n')
+            self.tags = None
+        if df is not None:
+            last_doc_id = None
+            doc_tags = {}
+            all_tags = []
+            for _, row in tqdm(df.iterrows(), total=df.shape[0], desc='Loading tags'):
+                #print('F row', row)
+                doc_id = row['rewire_id']
+                if doc_id != last_doc_id and last_doc_id is not None:
+                    self.add_doc_tags(all_tags, doc_tags)
+                    doc_tags = {}
+                if doc_tags:
+                    # consistency check
+                    assert doc_tags['doc_id'] == doc_id
+                else:
+                    # initialise doc_tags
+                    doc_tags['doc_id'] = doc_id
+                    for tag_name in tag_names:
+                        doc_tags[tag_name] = []
+                # update doc_tags with new row
+                for tag_name in tag_names:
+                    tag = row[tag_name]
+                    try:
+                        assert ' ' not in tag
+                        #assert ',' not in tag  # actually occurs in token column
+                        #assert '"' not in tag
+                    except TypeError:
+                        raise ValueError('unexpected tag %r of type %s in row %r' %(tag, type(tag), row))
+                    except AssertionError:
+                        raise ValueError('unexpected tag %r of type %s in row %r' %(tag, type(tag), row))
+                    doc_tags[tag_name].append(tag)
+                # prepare for next row
+                last_doc_id = doc_id
+            # complete last item
+            if doc_tags:
+                self.add_doc_tags(all_tags, doc_tags)
+            # check all training items are covered
+            # (add_doc_tags() has rejected items outside our
+            # dataset, so we only need to check the number
+            # of items is correct)
+            if len(all_tags) == len(self.documents):
+                all_tags.sort()
+                assert all_tags[0][0] == 0
+                assert all_tags[-1][0] == len(all_tags) - 1
+                # strip index numbers from list
+                self.tags = list(map(lambda x: x[1], all_tags))
+            else:
+                sys.stderr.write('Warning: ignoring %s as it does not cover all of %s\n' %(
+                    features_path, data_path
+                ))
+            if save_ffp:
+                out = open(fast_features_path, 'wt')
+                header = ['rewire_id', 'tag_idx'] + tag_names
+                out.write(','.join(header))
+                out.write('\n')
+                for doc_idx, doc_tags in enumerate(tqdm(self.tags, desc='Saving subset of tags')):
+                    n_tags = len(doc_tags[tag_names[0]].split(' '))
+                    exp_doc_tags = {}
+                    for tag_name in tag_names:
+                        exp_doc_tags[tag_name] = doc_tags[tag_name].split(' ')
+                        if len(exp_doc_tags[tag_name]) != n_tags:
+                            doc_id = self.docs[doc_idx]
+                            raise ValueError('mismatch of number of tags for document %s: %d for %s, %d for %s\n' %(
+                                doc_id, n_tags, tag_names[0], len(exp_doc_tags[tag_name]), tag_name
+                                ))
+                    for tag_index in range(n_tags):
+                        row = []
+                        row.append(self.docs[doc_idx])
+                        row.append('%d' %tag_index)
+                        for tag_name in tag_names:
+                            tag = exp_doc_tags[tag_name][tag_index]
+                            if ',' in tag or '"' in tag:  # csv escape
+                                tag = tag.replace('"', '""')
+                                tag = '"' + tag + '"'
+                            row.append(tag)
+                        out.write(','.join(row))
+                        out.write('\n')
+                out.close()
+
+    def add_doc_tags(self, all_tags, doc_tags):
+        doc_id = doc_tags['doc_id']
+        if not doc_id in self.doc2idx:
+            return
+        new_doc_tags = {}
+        length = None
+        for key in doc_tags.keys():
+            if key == 'doc_id':
+                continue
+            tags = doc_tags[key]
+            if length is not None:
+                assert length == len(tags)
+            else:
+                length = len(tags)
+            new_doc_tags[key] = ' '.join(tags)
+        doc_idx = self.doc2idx[doc_id]
+        all_tags.append((doc_idx, new_doc_tags))
+
 
 def main():
     import argparse
