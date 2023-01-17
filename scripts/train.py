@@ -214,6 +214,20 @@ def main():
                  ' (default: gensim)',
             )
     parser.add_argument(
+            '--no_lowercase_ngrams', dest='use_lowercase', action='store_false',
+            help='Do not create lowercase ngram features if --ngrams is not empty'
+                 ' (default is to create both truecase and lowercase ngrams);'
+                 ' see also --no-truecase-ngrams',
+            )
+    parser.set_defaults(use_lowercase=True)
+    parser.add_argument(
+            '--no_truecase_ngrams', dest='use_truecase', action='store_false',
+            help='Do not create truecase ngram features if --ngrams is not empty'
+                 ' (default is to create both truecase and lowercase ngrams);'
+                 ' see also --no-lowercase-ngrams',
+            )
+    parser.set_defaults(use_truecase=True)
+    parser.add_argument(
             '--ngrams', type=str, default='1,2,3',
             help='What values of n to use when producing n-grams as text features'
                  ' (default: 1,2,3 = unigrams, bigrams and trigrams)',
@@ -225,9 +239,18 @@ def main():
                  ' (default: [PAD])',
             )
     parser.add_argument(
-            '--min_freq', type=int, default=8,
+            '--tag_combinations', type=str, default='p,s',
+            help='Create ngram features from tag combinations for each'
+                 ' comma-separted combination of tags (t=token, p=POS,'
+                 ' d=dependency relation, s=sentiment); multiple tags'
+                 ' can be concatenated to form complex tags, e.g. "ps"'
+                 ' may produce a tag "NOUN neutral"'
+                 ' (default: p,s)',
+            )
+    parser.add_argument(
+            '--min_freq', type=int, default=10,
             help='Events must have at least this frequency to be included'
-                 ' in the vocabulary (default: 8)',
+                 ' in the vocabulary (default: 10)',
             )
     parser.add_argument(
             '--clip_counts', type=float, default=1.0,
@@ -265,6 +288,8 @@ def main():
     print('Dateset seed:', seed)
     training_data = get_training_data(args, seed)
     print('Number of training items:', len(training_data))
+    args.tag_combinations = args.tag_combinations.replace(' ', ',')
+    args.tag_combinations = args.tag_combinations.replace('+', '')
     detector = SexismDetectorWithNgrams(
             task  = args.task,
             model = get_internal_model(args),
@@ -272,6 +297,10 @@ def main():
             min_freq  = args.min_freq,
             ngram_range = get_ngram_range(args),
             padding     = get_padding(args),
+            use_truecase = args.use_truecase,
+            use_lowercase = args.use_lowercase,
+            tag_combinations = args.tag_combinations,
+            clip_counts = args.clip_counts,
     )
     print('Training...')
     features = detector.train(

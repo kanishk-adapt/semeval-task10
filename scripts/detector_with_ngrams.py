@@ -38,16 +38,6 @@ class SexismDetectorWithVocab(SexismDetector):
         self.tokeniser = tokeniser
         self.min_freq  = min_freq
         self.clip_counts = clip_counts
-        self.use_truecase = True
-        self.use_lowercase = True
-        self.tag_combinations = [
-            ('p',), ('d',), ('s',),
-            #('p', 'd'), ('p', 's'), ('d', 's'),
-            #('p', 'd', 's'),
-            #('t', 'p',), ('t', 'd',), ('t', 's',),
-            #('t', 'p', 'd'), ('t', 'p', 's'), ('t', 'd', 's'),
-            #('t', 'p', 'd', 's'),
-        ]
 
     def train(self, data_with_labels, **kwargs):
         # (1) build the vocabulary from the training data
@@ -86,6 +76,7 @@ class SexismDetectorWithVocab(SexismDetector):
         columns = self.get_vector_length()
         dtype   = self.get_vector_dtype()
         vector = numpy.zeros((columns,), dtype=dtype)
+        non_zero_columns = set()
         for event in self.get_item_events(item):
             try:
                 index = self.event2index[event]
@@ -95,12 +86,14 @@ class SexismDetectorWithVocab(SexismDetector):
                 vector[index] = 1
             else:
                 vector[index] += 1
+            non_zero_columns.add(index)
         if self.clip_counts > 0.0 and self.clip_counts < 1.0:
             # map values in such a way that self.clip_counts close to 0
             # behaves similarly to self.clip_counts == 0 and
             # self.clip_counts close to 1 behaves similarly to
             # self.clip_counts == 1
-            for column in range(columns):
+            #for column in range(columns):  # TODO: usually, there are only a few non-zero columns
+            for column in non_zero_columns:
                 vector[index] = vector[index] ** (1.0 - self.clip_counts)
         return vector
 
@@ -113,12 +106,23 @@ class SexismDetectorWithVocab(SexismDetector):
 
 class SexismDetectorWithNgrams(SexismDetectorWithVocab):
 
-    def __init__(self, ngram_range = None, padding = None, **kwargs):
+    def __init__(self,
+        ngram_range = None, padding = None,
+        use_truecase = True, use_lowercase = True,
+        tag_combinations = 'p,d,s,tp,pd',
+        **kwargs
+    ):
         super().__init__(**kwargs)
         if not ngram_range:
             ngram_range = [1]
         self.ngram_range = ngram_range
         self.padding = padding
+        self.use_truecase = True
+        self.use_lowercase = True
+        self.tag_combinations = []
+        for tag_combination in tag_combinations.split(','):
+            # expand e.g. 'pd' to ('p', 'd')
+            self.tag_combinations.append(tuple(tag_combination))
 
     def get_item_events(self, item):
         for tag_name, sequence in self.get_item_sequences(item):
