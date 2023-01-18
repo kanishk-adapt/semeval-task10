@@ -52,12 +52,6 @@ def training(model, project_name, sweep_defaults, train_dataset, val_dataset):
 
         for step, batch in enumerate(train_dataloader):
 
-            if step % 40 == 0 and not step == 0:
-
-                #elapsed = format_time(time.time() - t0)
-
-                print('  Batch {:>5,} of {:>5,}. Elapsed: {:}'.format(step, len(train_dataloader), elapsed))
-
             b_input_ids = batch[0].to(device)
             b_input_mask = batch[1].to(device)
             b_labels = batch[2].to(device)

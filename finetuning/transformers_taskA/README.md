@@ -1,0 +1,16 @@
+
+Typical run:
+``` shell
+
+python3 main.py --train_path train_all_task.csv
+        --test_path task_a_labels.csv \
+        --model_name ['bert', 'hate-bert', 'opt 350', 'opt 1.3', 'distil bert'] \
+        --model_dir ['bert-base-uncased', '<path-to-hate-bert>', 'facebook/opt-350m', 'facebook/opt-1.3b', 'distilbert-base-uncased', ] \
+        --batch_size <batch-size> \
+        --epochs <epochs> \
+        --learning_rate <learning-rate> \
+        --weight_decay <weight-decay> \
+        --wandb_project <wandb-project-name> \
+        --save_dir <directory-path>
+
+```
