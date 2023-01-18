@@ -2,7 +2,8 @@
 Typical run:
 ``` shell
 
-python3 main.py --train_path train_all_task.csv
+python3 main.py --train_path k8020-tr.csv
+        --validation_path k8020-dev.csv
         --test_path task_a_labels.csv \
         --model_name ['bert', 'hate-bert', 'opt 350', 'opt 1.3', 'distil bert'] \
         --model_dir ['bert-base-uncased', '<path-to-hate-bert>', 'facebook/opt-350m', 'facebook/opt-1.3b', 'distilbert-base-uncased', ] \
