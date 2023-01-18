@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# (C) 2019, 2022, 2023 Dublin City University
+# All rights reserved. This material may not be
+# reproduced, displayed, modified or distributed without the express prior
+# written permission of the copyright holder.
+
+# Author: Kanishk Verma
+
 from helpers import *
 
 def ret_test_dataloader(batch_size, test_dataset):
