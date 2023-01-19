@@ -121,8 +121,12 @@ def get_internal_model(args):
         return BernoulliNB(fit_prior = not args.uniform_prior)
     elif args.classifier == 'DecisionTree':
         return DecisionTreeClassifier()
+    elif args.classifier == 'DecisionTreeM08':
+        return DecisionTreeClassifier(min_samples_leaf = 8)
     elif args.classifier == 'DecisionTreeM10':
         return DecisionTreeClassifier(min_samples_leaf = 10)
+    elif args.classifier == 'DecisionTreeM15':
+        return DecisionTreeClassifier(min_samples_leaf = 15)
     elif args.classifier == 'DecisionTreeM50':
         return DecisionTreeClassifier(min_samples_leaf = 50)
     elif args.classifier == 'RandomForest':
@@ -270,12 +274,14 @@ def main():
                  ' BernoulliNB,'
                  ' ComplementNB,'
                  ' DecisionTree,'
+                 ' DecisionTreeM08 (min_samples_leaf=8),'
                  ' DecisionTreeM10 (min_samples_leaf=10),'
+                 ' DecisionTreeM15 (min_samples_leaf=15),'
                  ' DecisionTreeM50 (min_samples_leaf=50),'
                  ' MultinomialNB,'
                  ' RandomForest,'
-                 ' RandomForestM10 (min_samples_leaf=10,'
-                 ' RandomForestM50 (min_samples_leaf=50,'
+                 ' RandomForestM10 (min_samples_leaf=10),'
+                 ' RandomForestM50 (min_samples_leaf=50),'
                  ' RandomForest'
                  ' (default: DecisionTreeM10)',
             )
