@@ -13,6 +13,7 @@ import joblib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB, ComplementNB, BernoulliNB
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import LinearSVC
 import sys
 from xgboost import XGBClassifier
 
@@ -136,6 +137,8 @@ def get_internal_model(args):
         return RandomForestClassifier(min_samples_leaf = 10)
     elif args.classifier == 'RandomForestM50':
         return RandomForestClassifier(min_samples_leaf = 50)
+    elif args.classifier in ('LinearSVM', 'LinearSVC'):
+        return LinearSVC(C=args.c)
     elif args.classifier == 'XGBoost':
         return XGBClassifier(use_label_encoder=False)  # our labels are encoded already
     else:
@@ -281,13 +284,19 @@ def main():
                  ' DecisionTreeM10 (min_samples_leaf=10),'
                  ' DecisionTreeM15 (min_samples_leaf=15),'
                  ' DecisionTreeM50 (min_samples_leaf=50),'
+                 ' LinearSVM,'
                  ' MultinomialNB,'
                  ' RandomForest,'
                  ' RandomForestM10 (min_samples_leaf=10),'
                  ' RandomForestM50 (min_samples_leaf=50),'
                  ' RandomForest,'
                  ' XGBoost'
-                 ' (default: DecisionTreeM10)',
+                 ' (default: XGBoost)',
+            )
+    parser.add_argument(
+            '--c', type=float, default='0.025',
+            help='Parameter C for LinearSVM'
+                 ' (default: 0.025)',
             )
     parser.add_argument(
             '--uniform_prior', action='store_true',
