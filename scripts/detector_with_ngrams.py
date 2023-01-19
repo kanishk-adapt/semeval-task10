@@ -15,8 +15,10 @@ from __future__ import print_function
 
 from collections import defaultdict
 import numpy
+import os
 from sklearn.naive_bayes import MultinomialNB
 import sys
+from tqdm import tqdm
 
 from detector_base import SexismDetector
 
@@ -161,3 +163,52 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
                 yield (tag_combo_name, sequence)
         elif self.tag_combinations:
             raise ValueError('Requested tag-based features but tags not loaded')
+
+
+class SexismDetectorWithNgramsAndWordlists(SexismDetectorWithNgrams):
+
+    def __init__(self,
+        wordlist_folder = 'data/wordlists',
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        relevant_filenames = []
+        for filename in os.listdir(wordlist_folder):
+            if filename.endswith('.txt'):
+                relevant_filenames.append(filename)
+        self.wordlists = []
+        for filename in tqdm(relevant_filenames, desc='Loading wordlist(s)'):
+           f = open(os.path.join(wordlist_folder, filename), 'rt')
+           is_lower = '-truecase' not in filename
+           words = set()
+           while True:
+               line = f.readline()
+               if not line:
+                   break
+               if is_lower:
+                   assert line == line.lower()
+               for word in line.split():
+                   words.add(word)
+           f.close()
+           self.wordlists.append((filename[:-4], is_lower, words))
+
+    def get_item_events(self, item):
+        for event in super().get_item_events(item):
+            yield event
+        if not self.wordlists:
+            return
+        text = item.get_text()
+        tokens_truecase = None
+        tokens_lowercase = None
+        for wl_name, wl_is_lower, wl_words in self.wordlists:
+            if wl_is_lower:
+                if tokens_lowercase is None:
+                    tokens_lowercase = self.tokeniser(text.lower())
+                tokens = tokens_lowercase
+            else:
+                if tokens_truecase is None:
+                    tokens_truecase = self.tokeniser(text)
+                tokens = tokens_truecase
+            for token in tokens:
+                if token in wl_words:
+                    yield 'WL:' + wl_name

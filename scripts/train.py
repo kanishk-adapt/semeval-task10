@@ -19,7 +19,7 @@ from xgboost import XGBClassifier
 
 from basic_dataset import Concat
 from edos_dataset import EDOSDataset
-from detector_with_ngrams import SexismDetectorWithNgrams
+from detector_with_ngrams import SexismDetectorWithNgramsAndWordlists
 from tokeniser import simple_tokeniser, nltk_tokeniser, spacy_tokeniser, \
                       gensim_tokeniser
 
@@ -263,9 +263,16 @@ def main():
                  ' (default: p,s)',
             )
     parser.add_argument(
-            '--min_freq', type=int, default=10,
+            '--wordlist_folder', type=str, default='data/wordlists',
+            help='Where to find wordlists; only files with .txt suffix will be'
+                 ' read; if the filename (not the path) contains "-truecase",'
+                 ' word matching will be case-sentive'
+                 ' (default: data/wordlists)',
+            )
+    parser.add_argument(
+            '--min_freq', type=int, default=14,
             help='Events must have at least this frequency to be included'
-                 ' in the vocabulary (default: 10)',
+                 ' in the vocabulary (default: 14)',
             )
     parser.add_argument(
             '--clip_counts', type=float, default=1.0,
@@ -314,7 +321,7 @@ def main():
     print('Number of training items:', len(training_data))
     args.tag_combinations = args.tag_combinations.replace(' ', ',')
     args.tag_combinations = args.tag_combinations.replace('+', '')
-    detector = SexismDetectorWithNgrams(
+    detector = SexismDetectorWithNgramsAndWordlists(
             task  = args.task,
             model = get_internal_model(args),
             tokeniser = get_tokeniser(args),
@@ -325,6 +332,7 @@ def main():
             use_lowercase = args.use_lowercase,
             tag_combinations = args.tag_combinations,
             clip_counts = args.clip_counts,
+            wordlist_folder = args.wordlist_folder
     )
     print('Training...')
     features = detector.train(
