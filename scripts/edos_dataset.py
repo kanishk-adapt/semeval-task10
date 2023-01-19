@@ -19,9 +19,9 @@ from tqdm import tqdm
 
 settype2setting = {
     # dataset name --> path suffix, is_labelled, cross-validation
-    'official-dev-a': ('dev-task-a/dev_task_a_entries.csv', False, False),
-    'official-dev-b': ('dev-task-b/dev_task_b_entries.csv', False, False),
-    'official-dev-c': ('dev-task-c/dev_task_c_entries.csv', False, False),
+    'official-dev-a': ('dev-task-a/dev_task_a_combined.csv', False, False),
+    'official-dev-b': ('dev-task-b/dev_task_b_combined.csv', False, False),
+    'official-dev-c': ('dev-task-c/dev_task_c_combined.csv', False, False),
     # TODO: official test sets
     'official-training': ('train_all_tasks.csv', True, False),
     'internal-training': ('k8020-tr-run-%d.csv', True, True),
@@ -76,7 +76,8 @@ class EDOSDataset(Dataset):
         # load POS and deprel features
         features_path = os.path.join(path, 'dep-pos', 'extracted_features.csv')
         fast_features_path = os.path.join(  # e.g. extracted_features-k8020-dev-run-1.csv
-            path, 'dep-pos', 'extracted_features-%s' %path_suffix
+            path, 'dep-pos',
+            'extracted_features-%s' %(path_suffix.replace('/', '-'))
         )
         tag_names = 'token pos_tag dep_tag sentiment'.split()
         if os.path.exists(fast_features_path):
@@ -135,9 +136,13 @@ class EDOSDataset(Dataset):
                 # strip index numbers from list
                 self.tags = list(map(lambda x: x[1], all_tags))
             else:
+                sys.stderr.write('Found tags for %d of %d documents\n' %(
+                    len(all_tags), len(self.documents)
+                ))
                 sys.stderr.write('Warning: ignoring %s as it does not cover all of %s\n' %(
                     features_path, data_path
                 ))
+                save_ffp = False
             if save_ffp:
                 out = open(fast_features_path, 'wt')
                 header = ['rewire_id', 'tag_idx'] + tag_names
@@ -171,6 +176,7 @@ class EDOSDataset(Dataset):
         doc_id = doc_tags['doc_id']
         if not doc_id in self.doc2idx:
             return
+        # remove doc_id key and check all sequences have the same length
         new_doc_tags = {}
         length = None
         for key in doc_tags.keys():
@@ -183,6 +189,14 @@ class EDOSDataset(Dataset):
                 length = len(tags)
             new_doc_tags[key] = ' '.join(tags)
         doc_idx = self.doc2idx[doc_id]
+        # do not add entries twice
+        for existing_doc_idx, old_doc_tags in all_tags:
+            if existing_doc_idx == doc_idx:
+                return
+                #raise ValueError('Duplicate tags for %s: %r and %r' %(
+                #    doc_id, old_doc_tags, new_doc_tags
+                #))
+        # add tags to list
         all_tags.append((doc_idx, new_doc_tags))
 
 

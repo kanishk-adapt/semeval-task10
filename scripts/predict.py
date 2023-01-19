@@ -85,7 +85,6 @@ def main():
     print('Making predictions...')
     predictions = detector.predict(test_data)
     print('Made %d prediction(s)' %len(predictions))
-    print('EDOS cvs data follows')
     # print predictions in EDOS format
     task = detector.task
     settype = args.settype
@@ -95,6 +94,7 @@ def main():
         args.output = args.output %locals()
     if args.output == '-':
         out = sys.stdout
+        print('EDOS cvs data follows')
     else:
         out = open(args.output, 'wt')
         print('Writing predictions to', args.output)
