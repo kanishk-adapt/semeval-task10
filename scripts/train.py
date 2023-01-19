@@ -14,6 +14,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB, ComplementNB, BernoulliNB
 from sklearn.tree import DecisionTreeClassifier
 import sys
+from xgboost import XGBClassifier
 
 from basic_dataset import Concat
 from edos_dataset import EDOSDataset
@@ -135,6 +136,8 @@ def get_internal_model(args):
         return RandomForestClassifier(min_samples_leaf = 10)
     elif args.classifier == 'RandomForestM50':
         return RandomForestClassifier(min_samples_leaf = 50)
+    elif args.classifier == 'XGBoost':
+        return XGBClassifier(use_label_encoder=False)  # our labels are encoded already
     else:
         raise ValueError('unknown classifier %s' %args.classifier)
 
@@ -282,7 +285,8 @@ def main():
                  ' RandomForest,'
                  ' RandomForestM10 (min_samples_leaf=10),'
                  ' RandomForestM50 (min_samples_leaf=50),'
-                 ' RandomForest'
+                 ' RandomForest,'
+                 ' XGBoost'
                  ' (default: DecisionTreeM10)',
             )
     parser.add_argument(

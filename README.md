@@ -21,7 +21,11 @@ nltk
 numpy
 pandas
 scikit-learn
-spacy (only needed if requesting its tokeniser with `--tokeniser`)
+spacy
+xgboost
+
+(SpaCy is only needed if requesting its tokeniser with `train.py --tokeniser`,
+or making predictions with a model that was trained with this option.)
 
 NLTK asks to further run inside python:
 ```
