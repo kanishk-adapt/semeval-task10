@@ -11,17 +11,12 @@
 from collections import defaultdict
 import sys
 
-def get_seed(args):
-    if True:
-        # seeding should make no difference in inference mode but let's test this
-        # --> keep PRNGs with non-reproducible system seed
-        #     and derive a string seed for our functions
-        #     that use hashing to randomise data
-        import base64
+def set_seed(args):
+    if args.seed:
         import numpy
-        # get 256 bit of randomness
-        seed = base64.b64encode(numpy.random.bytes(32)).decode('utf-8')
-    return seed
+        import random
+        numpy.random.seed(args.seed)
+        random.seed(args.seed)
 
 def main():
     import argparse
@@ -59,7 +54,7 @@ def main():
     else:
         weights = n_inputs * [1.0]
     print('Seeding PRNGs...')
-    seed = get_seed(args)
+    set_seed(args)
     print('Reading predictions...')
     # read files
     doc_id2predictions = {}
