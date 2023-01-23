@@ -50,9 +50,9 @@ def main():
             help='Where to find the EDOS data (default: data)',
             )
     parser.add_argument(
-            '--model', type=str, default='model-for-task-a.out',
+            '--model', type=str, default='',
             help='Read the model from this file'
-                 ' (default: model-for-task-a.out)',
+                 ' (default: model-for-task-$EDOS_TASK.out)',
             )
     parser.add_argument(
             '--output', type=str, default='predictions-%(task)s-%(settype)s-%(rnd)x.csv',
@@ -75,6 +75,15 @@ def main():
             )
     print('Parsing arguments...')
     args = parser.parse_args()
+    if not args.model:
+        import os
+        try:
+            task = os.environ['EDOS_TASK'].lower()
+        except KeyError:
+            task = 'a'
+        args.model = 'model-for-task-%s.out' %task
+    else:
+        task = None
     #print('Seeding PRNGs...')
     seed = get_seed(args)
     print('Loading model...')
@@ -86,7 +95,10 @@ def main():
     predictions = detector.predict(test_data)
     print('Made %d prediction(s)' %len(predictions))
     # print predictions in EDOS format
-    task = detector.task
+    if task is None:
+        task = detector.task
+    else:
+        assert task == detector.task
     settype = args.settype
     if '%' in args.output:
         import random
@@ -98,16 +110,18 @@ def main():
     else:
         out = open(args.output, 'wt')
         print('Writing predictions to', args.output)
-    if task == 'a':
-        print('rewire_id,label_pred', file=out)
-    else:
-        raise NotImplementedError
+    print('rewire_id,label_pred', file=out)
     for index, item in enumerate(test_data):
         assert len(item.documents) == 1  # no subunit sampling for test sets
         doc_idx = item.documents[0]
         assert doc_idx == index  # this should be true for test sets
         doc_id = item.dataset.docs[doc_idx]
         prediction = predictions[index]
+        if '"' in prediction or ',' in prediction:
+            # cell protection in csv format
+            if '"' in prediction:
+                prediction = prediction.replace('"', '""')
+            prediction = '"%s"' %prediction
         print('%s,%s' %(doc_id, prediction), file=out)
     if args.output != '-':
         out.close()

@@ -19,9 +19,9 @@ from tqdm import tqdm
 
 settype2setting = {
     # dataset name --> path suffix, is_labelled, cross-validation
-    'official-dev-a': ('dev-task-a/dev_task_a_combined.csv', False, False),
-    'official-dev-b': ('dev-task-b/dev_task_b_combined.csv', False, False),
-    'official-dev-c': ('dev-task-c/dev_task_c_combined.csv', False, False),
+    'official-dev-a': ('dev-task-a/dev_task_a_combined.csv', True, False),
+    'official-dev-b': ('dev-task-b/dev_task_b_combined.csv', True, False),
+    'official-dev-c': ('dev-task-c/dev_task_c_combined.csv', True, False),
     # TODO: official test sets
     'official-training': ('train_all_tasks.csv', True, False),
     'internal-training': ('k8020-tr-run-%d.csv', True, True),
@@ -55,7 +55,14 @@ class EDOSDataset(Dataset):
         # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas
         for _, row in tqdm(df.iterrows(), total=df.shape[0], desc='Loading data'):  # https://stackoverflow.com/questions/47087741/use-tqdm-progress-bar-with-pandas
             if is_labelled:
-                label = row['label_vector'][:4].rstrip()  # 'none' or '%d.%d' format
+                label = None
+                for candidate_column in 'label_vector label label_pred'.split():
+                    try:
+                        label = row[candidate_column][:4].rstrip()  # 'none' or '%d.%d' format
+                    except KeyError:
+                        pass
+                if not label:
+                    raise ValueError('label column not found')
             else:
                 label = 'n/a'
             if skip_not_sexist and label == 'none':

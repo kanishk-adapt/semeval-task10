@@ -18,11 +18,33 @@ from sklearn import metrics
 import sys
 import time
 
+task_b_long_labels = [
+    '1. threats, plans to harm and incitement',
+    '2. derogation',
+    '3. animosity',
+    '4. prejudiced discussions',
+]
 
-fine_grained_labels = '1.1 1.2 2.1 2.2 2.3 3.1 3.2 3.3 3.4 4.1 4.2'.split()
+task_c_long_labels = [
+    '1.1 threats of harm',
+    '1.2 incitement and encouragement of harm',
+    '2.1 descriptive attacks',
+    '2.2 aggressive and emotive attacks',
+    '2.3 dehumanising attacks & overt sexual objectification',
+    '3.1 casual use of gendered slurs, profanities, and insults',
+    '3.2 immutable gender differences and gender stereotypes',
+    '3.3 backhanded gendered compliments',
+    '3.4 condescending explanations or unwelcome advice',
+    '4.1 supporting mistreatment of individual women',
+    '4.2 supporting systemic discrimination against women as a group',
+]
+
+task_c_short_labels = []
+for label in task_c_long_labels:
+    task_c_short_labels.append(label[:3])
 
 label2index = {}
-for index, label in enumerate(fine_grained_labels):
+for index, label in enumerate(task_c_short_labels):
     label2index[label] = index
 
 
@@ -52,7 +74,8 @@ class SexismDetector:
 
     def predict(
         self, data, get_accuracy = False,
-        get_confusion_matrix = False
+        get_confusion_matrix = False,
+        use_long_labels = True,
     ):
         features = self.extract_features(data)
         # use numpy to get predictions
@@ -62,10 +85,14 @@ class SexismDetector:
         for row, label_idx in enumerate(y_pred):
             if self.task == 'a':
                 label = 'sexist' if label_idx else 'not sexist'
+            elif self.task == 'b' and use_long_labels:
+                label = task_b_long_labels[label_idx]
             elif self.task == 'b':
                 label = '%d' %(label_idx + 1)
+            elif self.task == 'c' and use_long_labels:
+                label = task_c_long_labels[label_idx]
             elif self.task == 'c':
-                label = fine_grained_labels[label_idx]
+                label = task_c_short_labels[label_idx]
             else:
                 raise ValueError('unknown task %r' %self.task)
             labels.append(label)

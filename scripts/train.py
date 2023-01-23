@@ -58,6 +58,7 @@ def get_training_data(args, seed):
             fraction_of_subunits = None,
             number_of_subunits = None,
             deduplicate = True,
+            skip_not_sexist = args.task in ('b', 'c'),
         ))
     # support alternative delimiters in --augmentation
     for delimiter in ',| ':
@@ -190,8 +191,11 @@ def main():
                  ' (default: none = no data augmentation)',
             )
     parser.add_argument(
-            '--task', type=str, default='a',
-            help='Which task to train for; one of "a", "b" or "c" (default: a)',
+            '--task', type=str, default='',
+            # default is set after checking $EDOS_TASK below
+            help='Which task to train for; one of "a", "b" or "c"'
+                 ' (default: use environment variable EDOS_TASK and'
+                 ' fall back to task "a" if not set)',
             )
     parser.add_argument(
             '--write_model_to', type=str, default='model-for-task-%s.out',
@@ -314,6 +318,15 @@ def main():
 
     print('Parsing arguments...')
     args = parser.parse_args()
+    if not args.task:
+        import os
+        try:
+            args.task = os.environ['EDOS_TASK'].lower()
+            print('Setting task to "%s" as per $EDOS_TASK' %args.task)
+        except KeyError:
+            args.task = 'a'
+            print('Using default task "%s"' %args.task)
+    assert args.task in ('a', 'b', 'c')
     print('Seeding PRNGs...')
     seed = get_seed(args)
     print('Dateset seed:', seed)

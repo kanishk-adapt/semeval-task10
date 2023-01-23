@@ -14,11 +14,11 @@ cut -d',' -f1 dev-task-c/dev_task_c_entries.csv | md5sum
 
 echo "Extracting labels..."
 cut -d',' -f2 dev_task_a_labels.csv > dev-task-a/labels.csv
-cut -d',' -f2 dev_task_b_labels.csv > dev-task-b/labels.csv
-cut -d',' -f2 dev_task_c_labels.csv > dev-task-c/labels.csv
+cut -d',' -f2- dev_task_b_labels.csv > dev-task-b/labels.csv
+cut -d',' -f2- dev_task_c_labels.csv > dev-task-c/labels.csv
 
 echo "Combining labels..."
-dev-task-a/
+cd dev-task-a/
 paste -d',' dev_task_a_entries.csv labels.csv > dev_task_a_combined.csv
 cd ..
 cd dev-task-b
