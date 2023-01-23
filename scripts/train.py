@@ -286,7 +286,7 @@ def main():
                  ' (default: 1 = binary features)',
             )
     parser.add_argument(
-            '--classifier', type=str, default='DecisionTreeM10',
+            '--classifier', type=str, default='XGBoost',
             help='What classifier to use. One of'
                  ' BernoulliNB,'
                  ' ComplementNB,'
