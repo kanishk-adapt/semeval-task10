@@ -86,6 +86,7 @@ def get_training_data(args, seed):
                 fraction_of_subunits = None,
                 number_of_subunits = int(fields[4]),
                 deduplicate = True,
+                skip_not_sexist = args.task in ('b', 'c'),
             ))
         elif augmentation.endswith('-sample-with-replacement'):
             fields = augmentation.split('-')
