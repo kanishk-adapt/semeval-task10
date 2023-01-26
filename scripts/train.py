@@ -287,12 +287,12 @@ def main():
                  ' (default: 1 = binary features)',
             )
     parser.add_argument(
-            '--normalise_by_number_of_documents', action='store_true',
+            '--normalise_by_number_of_documents', type=str, default='no',
             help='Normalise features that are based on event counts by'
-                 ' the number of documents in the training or test item'
-                 ' (default: be agnostic to the number of documents)'
+                 ' the number of documents in the training or test item;'
+                 ' one of "no", "before-clipping" and "after-clipping"'
+                 ' (default: no = be agnostic to the number of documents)'
             )
-    parser.set_defaults(normalise_by_number_of_documents=False)
     parser.add_argument(
             '--classifier', type=str, default='XGBoost',
             help='What classifier to use. One of'
