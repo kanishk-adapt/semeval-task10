@@ -34,12 +34,14 @@ class SexismDetectorWithVocab(SexismDetector):
 
     def __init__(self,
         tokeniser = None, min_freq = 5, clip_counts = 1,
+        normalise_by_number_of_documents = False,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.tokeniser = tokeniser
         self.min_freq  = min_freq
         self.clip_counts = clip_counts
+        self.normalise_by_number_of_documents = normalise_by_number_of_documents
 
     def train(self, data_with_labels, **kwargs):
         # (1) build the vocabulary from the training data
@@ -97,6 +99,11 @@ class SexismDetectorWithVocab(SexismDetector):
             #for column in range(columns):  # TODO: usually, there are only a few non-zero columns
             for column in non_zero_columns:
                 vector[index] = vector[index] ** (1.0 - self.clip_counts)
+        if self.normalise_by_number_of_documents:
+            n_docs = len(item.documents)
+            if n_docs > 1:
+                for column in non_zero_columns:
+                    vector[index] = vector[index] / float(n_docs)
         return vector
 
     def get_feature_matrix_column_names(self):

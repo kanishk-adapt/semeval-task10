@@ -287,6 +287,13 @@ def main():
                  ' (default: 1 = binary features)',
             )
     parser.add_argument(
+            '--normalise_by_number_of_documents', action='store_true',
+            help='Normalise features that are based on event counts by'
+                 ' the number of documents in the training or test item'
+                 ' (default: be agnostic to the number of documents)'
+            )
+    parser.set_defaults(normalise_by_number_of_documents=False)
+    parser.add_argument(
             '--classifier', type=str, default='XGBoost',
             help='What classifier to use. One of'
                  ' BernoulliNB,'
@@ -346,6 +353,7 @@ def main():
             use_lowercase = args.use_lowercase,
             tag_combinations = args.tag_combinations,
             clip_counts = args.clip_counts,
+            normalise_by_number_of_documents = args.normalise_by_number_of_documents,
             wordlist_folder = args.wordlist_folder
     )
     print('Training...')
