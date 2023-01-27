@@ -184,12 +184,13 @@ def main():
             help='Where to find the EDOS data (default: data)',
             )
     parser.add_argument(
-            '--augmentation', type=str, default='none',
+            '--augmentation', type=str, default='65-per-class-with-3-documents',
             help='How to augment the training data;'
                  ' space-separated list of methods;'
                  ' include "exclude_basic" to not include'
                  ' a copy of the basic dataset;'
-                 ' (default: none = no data augmentation)',
+                 ' none = no data augmentation'
+                 ' (default: 65-per-class-with-3-documents)',
             )
     parser.add_argument(
             '--task', type=str, default='',
@@ -294,7 +295,7 @@ def main():
                  ' (default: no = be agnostic to the number of documents)'
             )
     parser.add_argument(
-            '--classifier', type=str, default='XGBoost',
+            '--classifier', type=str, default='LinearSVM',
             help='What classifier to use. One of'
                  ' BernoulliNB,'
                  ' ComplementNB,'
@@ -310,7 +311,7 @@ def main():
                  ' RandomForestM50 (min_samples_leaf=50),'
                  ' RandomForest,'
                  ' XGBoost'
-                 ' (default: XGBoost)',
+                 ' (default: LinearSVM)',
             )
     parser.add_argument(
             '--c', type=float, default='0.025',
