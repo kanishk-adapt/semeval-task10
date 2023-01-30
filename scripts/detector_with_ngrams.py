@@ -34,12 +34,14 @@ class SexismDetectorWithVocab(SexismDetector):
 
     def __init__(self,
         tokeniser = None, min_freq = 5, clip_counts = 1,
+        normalise_by_number_of_documents = False,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.tokeniser = tokeniser
         self.min_freq  = min_freq
         self.clip_counts = clip_counts
+        self.normalise_by_number_of_documents = normalise_by_number_of_documents
 
     def train(self, data_with_labels, **kwargs):
         # (1) build the vocabulary from the training data
@@ -74,6 +76,13 @@ class SexismDetectorWithVocab(SexismDetector):
     def get_vector_length(self):  # sub-classes may want to add components for non-vocab features
         return len(self.vocab)
 
+    def get_vector_dtype(self):
+        if self.normalise_by_number_of_documents == 'no' \
+        and self.clip_counts in (0.0, 1.0):
+            return numpy.int32
+        else:
+            return numpy.single
+
     def get_item_feature_vector(self, item):  # sub-classes may want to add features here
         columns = self.get_vector_length()
         dtype   = self.get_vector_dtype()
@@ -84,11 +93,23 @@ class SexismDetectorWithVocab(SexismDetector):
                 index = self.event2index[event]
             except KeyError:  # token not in vocab
                 continue      # --> skip this event
-            if self.clip_counts == 1.0:
+            if self.clip_counts == 1.0 \
+            and self.normalise_by_number_of_documents != 'before-clipping':
                 vector[index] = 1
             else:
                 vector[index] += 1
             non_zero_columns.add(index)
+        if self.normalise_by_number_of_documents != 'no':
+            n_docs = float(len(item.documents))
+        if self.normalise_by_number_of_documents == 'before-clipping':
+            if n_docs > 1.0:
+                for column in non_zero_columns:
+                    vector[index] = vector[index] / float(n_docs)
+            # clipping for 1.0 case not handled above
+            if self.clip_counts == 1.0:
+                for column in non_zero_columns:
+                    if vector[index] > 1.0:
+                        vector[index] = 1.0
         if self.clip_counts > 0.0 and self.clip_counts < 1.0:
             # map values in such a way that self.clip_counts close to 0
             # behaves similarly to self.clip_counts == 0 and
@@ -97,6 +118,10 @@ class SexismDetectorWithVocab(SexismDetector):
             #for column in range(columns):  # TODO: usually, there are only a few non-zero columns
             for column in non_zero_columns:
                 vector[index] = vector[index] ** (1.0 - self.clip_counts)
+        if self.normalise_by_number_of_documents == 'after-clipping':
+            if n_docs > 1.0:
+                for column in non_zero_columns:
+                    vector[index] = vector[index] / n_docs
         return vector
 
     def get_feature_matrix_column_names(self):

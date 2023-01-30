@@ -184,12 +184,13 @@ def main():
             help='Where to find the EDOS data (default: data)',
             )
     parser.add_argument(
-            '--augmentation', type=str, default='none',
+            '--augmentation', type=str, default='100-per-class-with-3-documents',
             help='How to augment the training data;'
                  ' space-separated list of methods;'
                  ' include "exclude_basic" to not include'
                  ' a copy of the basic dataset;'
-                 ' (default: none = no data augmentation)',
+                 ' none = no data augmentation'
+                 ' (default: 100-per-class-with-3-documents)',
             )
     parser.add_argument(
             '--task', type=str, default='',
@@ -287,7 +288,15 @@ def main():
                  ' (default: 1 = binary features)',
             )
     parser.add_argument(
-            '--classifier', type=str, default='XGBoost',
+            '--normalise_by_number_of_documents', type=str, default='after-clipping',
+            help='Normalise features that are based on event counts by'
+                 ' the number of documents in the training or test item;'
+                 ' one of "no" (be agnostic to the number of documents),'
+                 ' "before-clipping" and "after-clipping"'
+                 ' (default: after-clipping)',
+            )
+    parser.add_argument(
+            '--classifier', type=str, default='LinearSVM',
             help='What classifier to use. One of'
                  ' BernoulliNB,'
                  ' ComplementNB,'
@@ -303,7 +312,7 @@ def main():
                  ' RandomForestM50 (min_samples_leaf=50),'
                  ' RandomForest,'
                  ' XGBoost'
-                 ' (default: XGBoost)',
+                 ' (default: LinearSVM)',
             )
     parser.add_argument(
             '--c', type=float, default='0.025',
@@ -346,6 +355,7 @@ def main():
             use_lowercase = args.use_lowercase,
             tag_combinations = args.tag_combinations,
             clip_counts = args.clip_counts,
+            normalise_by_number_of_documents = args.normalise_by_number_of_documents,
             wordlist_folder = args.wordlist_folder
     )
     print('Training...')
