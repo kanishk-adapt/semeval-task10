@@ -184,13 +184,13 @@ def main():
             help='Where to find the EDOS data (default: data)',
             )
     parser.add_argument(
-            '--augmentation', type=str, default='65-per-class-with-3-documents',
+            '--augmentation', type=str, default='100-per-class-with-3-documents',
             help='How to augment the training data;'
                  ' space-separated list of methods;'
                  ' include "exclude_basic" to not include'
                  ' a copy of the basic dataset;'
                  ' none = no data augmentation'
-                 ' (default: 65-per-class-with-3-documents)',
+                 ' (default: 100-per-class-with-3-documents)',
             )
     parser.add_argument(
             '--task', type=str, default='',
@@ -288,11 +288,12 @@ def main():
                  ' (default: 1 = binary features)',
             )
     parser.add_argument(
-            '--normalise_by_number_of_documents', type=str, default='no',
+            '--normalise_by_number_of_documents', type=str, default='after-clipping',
             help='Normalise features that are based on event counts by'
                  ' the number of documents in the training or test item;'
-                 ' one of "no", "before-clipping" and "after-clipping"'
-                 ' (default: no = be agnostic to the number of documents)'
+                 ' one of "no" (be agnostic to the number of documents),'
+                 ' "before-clipping" and "after-clipping"'
+                 ' (default: after-clipping)',
             )
     parser.add_argument(
             '--classifier', type=str, default='LinearSVM',
