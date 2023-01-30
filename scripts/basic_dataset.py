@@ -22,6 +22,9 @@ import random
 import sys
 import time
 
+from edos_labels import task_b_long_labels, task_c_short2long
+
+
 short2long_tag_name = {
     't': 'token',
     'p': 'pos_tag',
@@ -104,7 +107,47 @@ class Item:
         h.update(text.encode('utf-8'))  # convert to binary
         return h.hexdigest()[:trim]
 
-    def save_to_file(self, out):
+    def save_to_file(self, out, fileformat = 'debug', **kwargs):
+        if fileformat == 'debug':
+            self.save_to_file_for_debugging(out, **kwargs)
+        elif fileformat == 'edos':
+            self.save_to_file_in_edos_format(out, **kwargs)
+        else:
+            raise ValueError('unknown file format %s' %fileformat)
+
+    def save_to_file_in_edos_format(self, out, index = None):
+        # rewire_id,text,label_sexist,label_category,label_vector
+        row = []
+        # (1) rewire_id column
+        if len(self.documents) == 1:
+            doc_id = self.documents[0]
+            row.append(self.dataset.docs[doc_id])
+        else:
+            if index is None:
+                raise ValueError('When saving an augmented dataset in edos format, you need to provide the index of the item')
+            row.append('concat-%d' %index)
+        # (2) text column
+        text = self.get_text()
+        if '"' in text or ',' in text:
+            # cell protection in csv format
+            if '"' in text:
+                text = text.replace('"', '""')
+            text = '"%s"' %text
+        row.append(text)
+        # (3) label columns
+        if self.label == 'none':
+            row.append('not sexists')
+            row.append('none')
+            row.append('none')
+        else:
+            row.append('sexists')
+            row.append(task_b_long_labels[int(self.label[0])-1])
+            row.append(task_c_short2long[self.label])
+        # (4) write row
+        out.write(','.join(row))
+        out.write('\n')
+
+    def save_to_file_for_debugging(self, out):
         out.write('with %d document(s)' %len(self.documents))
         if self.label:
             out.write(' and label %s' %self.label)
@@ -401,12 +444,18 @@ class Dataset(collections.Sequence):
         n_lines = len(retval)
         return '\n'.join(retval), n_lines
 
-    def save_to_file(self, out, item_filter = None):
+    def save_to_file(self, out, item_filter = None, **kwargs):
+        write_item_idx = False
+        if 'fileformat' in kwargs and kwargs['fileformat'] == 'debug':
+            write_item_idx = True
+        if 'write_index' in kwargs:
+            write_item_idx =  kwargs['write_index']
         for item_idx, item in enumerate(self):
             if item_filter and item_filter(item):
                 continue  # skip item
-            out.write('item %d\n' %item_idx)
-            item.save_to_file(out)
+            if write_item_idx:
+                out.write('item %d\n' %item_idx)
+            item.save_to_file(out, index = item_idx, **kwargs)
 
     def hexdigest(self, trim = None):
         if not trim:

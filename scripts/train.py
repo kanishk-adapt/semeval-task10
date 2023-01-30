@@ -215,6 +215,12 @@ def main():
                  ' (default: do not write column names to disk)',
             )
     parser.add_argument(
+            '--write_data_to', type=str, default='',
+            help='Whether and where to write the training data, including '
+                 ' synthetic data if data augmentation is used'
+                 ' (default: do not write training data to disk)',
+            )
+    parser.add_argument(
             '--run',  type=int, default=1,
             help='Cross-validation run, e.g. 1 to 5 for 5-fold;'
                  ' ignored when training on the official training set'
@@ -341,6 +347,12 @@ def main():
     seed = get_seed(args)
     print('Dateset seed:', seed)
     training_data = get_training_data(args, seed)
+    if args.write_data_to:
+        # write training data to disk
+        print('Saving training data to %s...' %args.write_data_to)
+        f = open(args.write_data_to, 'wt')
+        training_data.save_to_file(f, fileformat = 'edos')
+        f.close()
     print('Number of training items:', len(training_data))
     args.tag_combinations = args.tag_combinations.replace(' ', ',')
     args.tag_combinations = args.tag_combinations.replace('+', '')
@@ -368,7 +380,7 @@ def main():
         print('Saving features to %s...' %args.write_features_to)
         joblib.dump(features, args.write_features_to)
     if args.write_column_names_to:
-         # write column maes to disk
+         # write column names to disk
          print('Saving column names to %s...' %args.write_column_names_to)
          f = open(args.write_column_names_to, 'wt')
          f.write('feature_matrix_column_name\n')
