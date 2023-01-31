@@ -43,14 +43,14 @@ def main():
             )
     parser.add_argument(
             '--stochastic', action='store_true',
-            help='Chose the label at random with probabilities according to votes'
-                 ' (default: chose majority label)',
+            help='Choose the label at random with probabilities according to votes'
+                 ' (default: choose majority label)',
             )
     parser.set_defaults(stochastic=False)
     parser.add_argument(
             '--least_votes', action='store_true',
-            help='Chose the label that receives the least number of non-zero votes'
-                 ' (default: chose the label that receives the highest number of votes)',
+            help='Choose the label that receives the least number of non-zero votes'
+                 ' (default: choose the label that receives the highest number of votes)',
             )
     parser.set_defaults(least_votes=False)
     parser.add_argument(
