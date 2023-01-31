@@ -450,6 +450,8 @@ class Dataset(collections.Sequence):
             write_item_idx = True
         if 'write_index' in kwargs:
             write_item_idx =  kwargs['write_index']
+        if 'fileformat' in kwargs and kwargs['fileformat'] == 'edos':
+            out.write('rewire_id,text,label_sexist,label_category,label_vector\n')
         for item_idx, item in enumerate(self):
             if item_filter and item_filter(item):
                 continue  # skip item
