@@ -10,11 +10,11 @@
 
 from collections import defaultdict
 import sys
+import random
 
 def set_seed(args):
     if args.seed:
         import numpy
-        import random
         numpy.random.seed(args.seed)
         random.seed(args.seed)
 
@@ -63,14 +63,14 @@ def main():
         weight = weights[input_index]
         f = open(input_path, 'rt')
         header = f.readline()
-        assert header.startswith('rewire_id,label_pred')
+        assert header.rstrip() == 'rewire_id,label_pred'
         while True:
             line = f.readline()
             if not line:
                 break
             fields = line.rstrip().split(',')
             doc_id = fields[0]
-            prediction = fields[1]
+            prediction = ','.join(fields[1:])  # some labels contain a comma
             if doc_id not in doc_id2predictions:
                 doc_id2predictions[doc_id] = []
                 documents.append(doc_id)
@@ -81,7 +81,6 @@ def main():
     print('Number of input predictions:', n_inputs)
     # print predictions in EDOS format
     if '%' in args.output:
-        import random
         rnd = random.randrange(2**64)
         args.output = args.output %locals()
     if args.output == '-':
@@ -106,6 +105,7 @@ def main():
             if candidate > best:
                 best = candidate
         prediction = best[2]
+        # note that the prediction is already in csv format
         print('%s,%s' %(doc_id, prediction), file=out)
     if args.output != '-':
         out.close()
