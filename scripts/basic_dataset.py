@@ -219,6 +219,7 @@ class Dataset(collections.Sequence):
         fraction_of_subunits = None,
         number_of_subunits   = None,
         deduplicate          = True,
+        simplify_labels_for_augmentation = None,
     ):
         if self.frozen:
             raise ValueError('Cannot set dataset mode after freezing it')
@@ -250,6 +251,7 @@ class Dataset(collections.Sequence):
         self.fraction_of_subunits = fraction_of_subunits
         self.number_of_subunits = number_of_subunits
         self.deduplicate = deduplicate
+        self.simplify_labels_for_augmentation = simplify_labels_for_augmentation
         self._reset_items()
 
     def _reset_items(self):
@@ -284,12 +286,30 @@ class Dataset(collections.Sequence):
         self.items.append(item)
         return True
 
+    def get_simplified_labels(self):
+        simplified_labels = set()
+        for label in self.labels:
+            simplified_labels.add(self.simplify_label(label))
+        return sorted(simplified_labels)
+
+    def simplify_label(self, label):
+        if not self.simplify_labels_for_augmentation:
+            return label
+        elif label == 'none':
+            return label
+        elif self.simplify_labels_for_augmentation == 'a':
+            return '1.1'
+        elif self.simplify_labels_for_augmentation == 'b':
+            return label[:1]
+        else:
+            return label
+
     def _reset_items_for_per_class_mode(self):
-        for label in sorted(self.labels):
+        for label in self.get_simplified_labels():
             # find candidate documents
             candidate_documents = []
             for doc_idx in range(len(self.documents)):
-                if self.doc2label[doc_idx] == label:
+                if self.simplify_label(self.doc2label[doc_idx]) == label:
                     candidate_documents.append(doc_idx)
             # create and expand samples
             for sample_of_documents in self._get_samples(
