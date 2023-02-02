@@ -33,10 +33,6 @@ def main():
                  ' (default: 101)',
             )
     parser.add_argument(
-            '--task', type=str, default='a',
-            help='Which task to train for; one of "a", "b" or "c" (default: a)',
-            )
-    parser.add_argument(
             '--weights', type=str, default='',
             help='Comman-separated list of weights for each input predictions'
                  ' (default: empty string = uniform weigths)',
@@ -120,10 +116,7 @@ def main():
     else:
         out = open(args.output, 'wt')
         print('Writing predictions to', args.output)
-    if args.task == 'a':
-        print('rewire_id,label_pred', file=out)
-    else:
-        raise NotImplementedError
+    print('rewire_id,label_pred', file=out)
     for doc_id in documents:
         debug = doc_id in debug_documents
         label2votes = defaultdict(lambda: 0.0)

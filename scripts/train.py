@@ -87,6 +87,7 @@ def get_training_data(args, seed):
                 number_of_subunits = int(fields[4]),
                 deduplicate = True,
                 skip_not_sexist = args.task in ('b', 'c'),
+                simplify_labels_for_augmentation = args.task if args.simplify_labels_for_augmentation else None,
             ))
         elif augmentation.endswith('-sample-with-replacement'):
             fields = augmentation.split('-')
@@ -192,6 +193,13 @@ def main():
                  ' none = no data augmentation'
                  ' (default: 100-per-class-with-3-documents)',
             )
+    parser.add_argument(
+            '--simplify_labels_for_augmentation', dest='simplify_labels_for_augmentation', action='store_true',
+            help='When sampling documents in concatenation-based data augmentation,'
+                 ' group documents according to the label of the target task'
+                 ' (default: use the full task C label for grouping)'
+            )
+    parser.set_defaults(simplify_labels_for_augmentation=False)
     parser.add_argument(
             '--task', type=str, default='',
             # default is set after checking $EDOS_TASK below
