@@ -28,6 +28,63 @@ settype2setting = {
     'internal-dev':      ('k8020-dev-run-%d.csv', True, True),
 }
 
+class TagReader:
+
+    def __init__(self, path):
+        self.path = path
+        self.filesize = os.path.getsize(path)
+        f = open(path, 'rt')
+        self.header = f.readline().rstrip().split(',')
+        self.fpos_first_row = f.tell()
+        self.bodysize = self.filesize - self.fpos_first_row
+        f.close()
+        self.name2column = {}
+        for column, name in enumerate(self.header):
+            self.name2column[name] = column
+            if name == 'token':
+                self.columns_before_token = column
+        self.columns_after_token = len(self.header) - self.columns_before_token - 1
+        self.min_bytes_per_row = 2 * len(self.header)
+        self.length = 1 + self.filesize // self.min_bytes_per_row
+        self.shape = (self.length, len(self.header))
+
+    def iterrows(self):
+        f = open(self.path, 'rt')
+        f.seek(self.fpos_first_row)
+        current_fpos = self.fpos_first_row
+        for virtual_row in range(self.length):
+            fpos = self.fpos_first_row + \
+                   (virtual_row * self.bodysize) // self.length
+            if fpos >= current_fpos:
+                line = f.readline()
+                current_fpos = f.tell()
+                fields = line.rstrip().split(',')
+                if len(fields) == len(self.header):
+                    # simple case: no csv quote escape
+                    row = fields
+                elif len(fields) > len(self.header):
+                    token = ','.join(fields[self.columns_before_token:-self.columns_after_token])
+                    if not token.startswith('"') or not token.endswith('"'):
+                        raise ValueError('token %r not quoted in tag row %r at position %d in %s' %(
+                            token, line, current_fpos, self.path
+                            ))
+                    token = token[1:-1]
+                    token = token.replace('""', '"')
+                    before_token = fields[:self.columns_before_token]
+                    after_token = fields[-self.columns_after_token:]
+                    row = before_token
+                    row.append(token)
+                    row = row + after_token
+                else:
+                    raise ValueError('too few fields (%d) in tag row %r at position %d in %s; header is %r' %(len(fields), line, current_fpos, self.path, self.header))
+                yield virtual_row, row
+            else:
+                # we overestimate the number of rows and often yield None
+                # to avoid having to scan the file twice to find out the
+                # exact number of rows
+                yield virtual_row, None
+        f.close()
+
 class EDOSDataset(Dataset):
 
     def load_from_path(self,
@@ -88,11 +145,13 @@ class EDOSDataset(Dataset):
         )
         tag_names = 'token pos_tag dep_tag sentiment'.split()
         if os.path.exists(fast_features_path):
-            df = pandas.read_csv(fast_features_path, dtype=str, na_filter=False)
+            df = TagReader(fast_features_path)
+            is_pandas = False
             save_ffp = False
         elif os.path.exists(features_path):
             df = pandas.read_csv(features_path, dtype=str, na_filter=False)
             save_ffp = True
+            is_pandas = True
         else:
             df = None
             sys.stderr.write('Warning: dep-pos features not found\n')
@@ -102,8 +161,12 @@ class EDOSDataset(Dataset):
             doc_tags = {}
             all_tags = []
             for _, row in tqdm(df.iterrows(), total=df.shape[0], desc='Loading tags'):
+                if row is None: continue  # hack to show progress without scanning file
                 #print('F row', row)
-                doc_id = row['rewire_id']
+                if is_pandas:
+                    doc_id = row['rewire_id']
+                else:
+                    doc_id = row[df.name2column['rewire_id']]
                 if doc_id != last_doc_id and last_doc_id is not None:
                     self.add_doc_tags(all_tags, doc_tags)
                     doc_tags = {}
@@ -117,11 +180,12 @@ class EDOSDataset(Dataset):
                         doc_tags[tag_name] = []
                 # update doc_tags with new row
                 for tag_name in tag_names:
-                    tag = row[tag_name]
+                    if is_pandas:
+                        tag = row[tag_name]
+                    else:
+                        tag = row[df.name2column[tag_name]]
                     try:
                         assert ' ' not in tag
-                        #assert ',' not in tag  # actually occurs in token column
-                        #assert '"' not in tag
                     except TypeError:
                         raise ValueError('unexpected tag %r of type %s in row %r' %(tag, type(tag), row))
                     except AssertionError:
