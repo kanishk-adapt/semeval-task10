@@ -12,6 +12,7 @@ from __future__ import print_function
 
 from basic_dataset import Dataset, Item
 
+import hashlib
 import pandas
 import os
 import sys
@@ -27,6 +28,15 @@ settype2setting = {
     'internal-training': ('k8020-tr-run-%d.csv', True, True),
     'internal-dev':      ('k8020-dev-run-%d.csv', True, True),
 }
+
+def get_signature(text):
+    # this signature is to protect against misinterpreting
+    # the column format of a csv file; the hash salt does not
+    # need to be kept secret
+    salt = 'edos'
+    text = '%d:%s:%s' %(len(salt), salt, text)
+    m = hashlib.sha256(text.encode('utf-8'))
+    return m.hexdigest()[:16]
 
 class TagReader:
 
@@ -44,8 +54,22 @@ class TagReader:
             if name == 'token':
                 self.columns_before_token = column
         self.columns_after_token = len(self.header) - self.columns_before_token - 1
-        self.min_bytes_per_row = 2 * len(self.header)
-        self.length = 1 + self.filesize // self.min_bytes_per_row
+        assert self.columns_after_token > 0
+        # try to read length from header
+        fields = self.header[-1].split('L')  # e.g. Lffff0000ffff0000L123
+        if len(fields) == 3 \
+        and len(fields[0]) == 0 \
+        and len(fields[1]) == 16 \
+        and len(fields[2]) >= 1 \
+        and fields[1] == get_signature(fields[2]):
+            # found valid signature
+            self.length = int(fields[2])
+            self.exact_length = True
+        else:
+            print('No length information found in csv header. Please delete cache files in old format.')
+            min_bytes_per_row = 2 * len(self.header)
+            self.length = 1 + self.filesize // min_bytes_per_row
+            self.exact_length = False
         self.shape = (self.length, len(self.header))
 
     def iterrows(self):
@@ -55,7 +79,7 @@ class TagReader:
         for virtual_row in range(self.length):
             fpos = self.fpos_first_row + \
                    (virtual_row * self.bodysize) // self.length
-            if fpos >= current_fpos:
+            if self.exact_length or fpos >= current_fpos:
                 line = f.readline()
                 current_fpos = f.tell()
                 fields = line.rstrip().split(',')
@@ -214,9 +238,17 @@ class EDOSDataset(Dataset):
                     features_path, data_path
                 ))
                 save_ffp = False
+            all_tags = None  # release memory
             if save_ffp:
                 out = open(fast_features_path, 'wt')
                 header = ['rewire_id', 'tag_idx'] + tag_names
+                # hack: add number of rows in header
+                #       (we add a signature to protect against
+                #       misinterpeting new column headers)
+                n_rows = sum(map(lambda x: len(x[tag_names[0]].split(' ')), self.tags))
+                payload = '%d' %n_rows
+                signature = get_signature(payload)
+                header.append('L%sL%s' %(signature, payload))
                 out.write(','.join(header))
                 out.write('\n')
                 for doc_idx, doc_tags in enumerate(tqdm(self.tags, desc='Saving subset of tags')):
@@ -239,6 +271,7 @@ class EDOSDataset(Dataset):
                                 tag = tag.replace('"', '""')
                                 tag = '"' + tag + '"'
                             row.append(tag)
+                        row.append('_')  # for the 'L%sL%s' hack above
                         out.write(','.join(row))
                         out.write('\n')
                 out.close()
