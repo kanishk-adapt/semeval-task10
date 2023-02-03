@@ -180,6 +180,7 @@ class Dataset(collections.Sequence):
     def __init__(self, seed = None,
         path = None, run = 1, settype = 'test',
         skip_not_sexist = False,
+        load_tags = True,
         debug = False,
         **kwargs   # see set_mode()
     ):
@@ -204,6 +205,7 @@ class Dataset(collections.Sequence):
             seed = ''
         self.seed = seed.encode('utf-8')
         self.frozen = False
+        self.load_tags = load_tags
         self.debug  = debug
         self.set_mode(**kwargs)
         if path:

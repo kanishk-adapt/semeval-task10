@@ -59,6 +59,7 @@ def get_training_data(args, seed):
             number_of_subunits = None,
             deduplicate = True,
             skip_not_sexist = args.task in ('b', 'c'),
+            load_tags = args.tag_combinations.strip(),
         ))
     # support alternative delimiters in --augmentation
     for delimiter in ',| ':
@@ -87,6 +88,7 @@ def get_training_data(args, seed):
                 number_of_subunits = int(fields[4]),
                 deduplicate = True,
                 skip_not_sexist = args.task in ('b', 'c'),
+                load_tags = args.tag_combinations.strip(),
                 simplify_labels_for_augmentation = args.task if args.simplify_labels_for_augmentation else None,
             ))
         elif augmentation.endswith('-sample-with-replacement'):

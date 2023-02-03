@@ -162,6 +162,9 @@ class EDOSDataset(Dataset):
                 sys.stderr.write('Loaded document %s with label %s\n' %(doc_id, label))
         self.is_labelled = is_labelled
         # load POS and deprel features
+        if not self.load_tags:
+            self.tags = None
+            return
         features_path = os.path.join(path, 'dep-pos', 'extracted_features.csv')
         fast_features_path = os.path.join(  # e.g. extracted_features-k8020-dev-run-1.csv
             path, 'dep-pos',

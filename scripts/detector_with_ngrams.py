@@ -155,6 +155,8 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
         self.tag_combinations = []
         for tag_combination in tag_combinations.split(','):
             # expand e.g. 'pd' to ('p', 'd')
+            if not tag_combination:  # ''.split(',') yields ['']
+                continue
             self.tag_combinations.append(tuple(tag_combination))
 
     def get_item_events(self, item):
@@ -187,7 +189,7 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
                 sequence = item.get_tags(tag_combination)
                 yield (tag_combo_name, sequence)
         elif self.tag_combinations:
-            raise ValueError('Requested tag-based features but tags not loaded')
+            raise ValueError('Requested tag-based features %r but tags not loaded' %self.tag_combinations)
 
 
 class SexismDetectorWithNgramsAndWordlists(SexismDetectorWithNgrams):
