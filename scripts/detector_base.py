@@ -17,6 +17,7 @@ import numpy
 from sklearn import metrics
 import sys
 import time
+from tqdm import tqdm
 
 from edos_labels import task_b_long_labels, task_c_long_labels, task_c_short_labels, label2index
 
@@ -100,20 +101,11 @@ class SexismDetector:
         rows = len(data)
         features = numpy.zeros((rows, columns), dtype=dtype)
         # populate feature matrix
-        if self.progress_info: last_verbose = start_t = time.time()
-        for row, item in enumerate(data):
-            if self.progress_info and time.time() > last_verbose + 3.0:
-                sys.stdout.write('%.1f%% of feature vectors extracted\r' %(100.0*row/rows))
-                last_verbose = time.time()
-            vector = self.get_item_feature_vector(item)
-            for column in range(columns):
-                features[row, column] = vector[column]
-        if self.progress_info:
-            sys.stdout.write('Finished extraction of feature vectors')
-            sys.stdout.write(' in %.1f seconds\n' %(time.time()-start_t))
+        for row, item in enumerate(tqdm(data, desc='Extracting features')):
+            self.get_item_feature_vector(item, features, row)
         return features
 
-    def get_item_feature_vector(self, item):
+    def get_item_feature_vector(self, item, matrix = None, row = None):
         raise NotImplementedError
 
     def get_feature_matrix_column_names(self):

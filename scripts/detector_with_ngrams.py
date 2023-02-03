@@ -83,10 +83,16 @@ class SexismDetectorWithVocab(SexismDetector):
         else:
             return numpy.single
 
-    def get_item_feature_vector(self, item):  # sub-classes may want to add features here
+    def get_item_feature_vector(self, item, matrix = None, row = None):
+        # sub-classes may want to add features here that do not fit
+        # the "count events" concept of get_item_events()
         columns = self.get_vector_length()
         dtype   = self.get_vector_dtype()
-        vector = numpy.zeros((columns,), dtype=dtype)
+        if matrix is None:
+            vector = numpy.zeros((columns,), dtype=dtype)
+        else:
+            assert row is not None
+            vector = matrix[row, :]  # create a view of the row
         non_zero_columns = set()
         for event in self.get_item_events(item):
             try:
