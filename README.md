@@ -53,8 +53,8 @@ TODO: do we need this model? We only use the tokeniser.
 
 See LICENSE.txt
 
+## Citation
+
+If you use this code or the released models, please cite our paper to appear at SemEval 2023.
 
 ## Acknowledgements
-
-
-
