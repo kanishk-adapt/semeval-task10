@@ -7,9 +7,9 @@ shared task.
 
 ## Folder Structure
 
-src/ -> scripts for all three tasks with transformer models
-soc_sci_exp/ -> scripts and excel sheets with responses from 3 social science expert annotators and Chat-GPT and FLAN-T5 (large)
-scripts -> scripts for experiments with baseline system and augmentation of training data
+1. src/ -> scripts for all three tasks with transformer models
+2. soc_sci_exp/ -> scripts and excel sheets with responses from 3 social science expert annotators and Chat-GPT and FLAN-T5 (large)
+3. scripts -> scripts for experiments with baseline system and augmentation of training data
 
 ## Pre-requisites
 
