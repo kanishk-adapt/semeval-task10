@@ -1,4 +1,4 @@
-Typical run:
+Typical run to TRAIN:
 ``` shell
 
 python3 main_save.py --train_path k8020-tr.csv \
@@ -15,4 +15,17 @@ python3 main_save.py --train_path k8020-tr.csv \
         --save_dir <directory-path>
 
 ```
+Typical run to TEST:
+
+``` shell
+
+
+python3 test.py --test_path test_task_b_entries.csv \
+	--model_name ['opt', 'hbert'] \
+	--model_dir_lab1 <directory_saved_model_label_1> \
+	--model_dir_lab2 <directory_saved_model_label_2> \
+	--model_dir_lab3 <directory_saved_model_label_3> \
+	--model_dir_lab4 <directory_saved_model_label_4>
+```
+
 
