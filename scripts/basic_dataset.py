@@ -49,7 +49,7 @@ class Item:
             return None
         text = []
         info = []
-        for seq_idx, doc_idx in enumerate(self.documents):
+        for _, doc_idx in enumerate(self.documents):
             document = self.dataset.documents[doc_idx]
             if get_text: text.append(document)
             if get_info: info.append((doc_idx, len(document.split())))
@@ -180,6 +180,7 @@ class Dataset(collections.Sequence):
     def __init__(self, seed = None,
         path = None, run = 1, settype = 'test',
         skip_not_sexist = False,
+        load_tags = True,
         debug = False,
         **kwargs   # see set_mode()
     ):
@@ -204,6 +205,7 @@ class Dataset(collections.Sequence):
             seed = ''
         self.seed = seed.encode('utf-8')
         self.frozen = False
+        self.load_tags = load_tags
         self.debug  = debug
         self.set_mode(**kwargs)
         if path:
@@ -259,8 +261,7 @@ class Dataset(collections.Sequence):
             assert not self.items  # assumes we cannot delete documents
             return
         self.items = []
-        if self.deduplicate:
-            self.hash2item_idxs = {}
+        self.hash2item_idxs = {}
         if self.unit == 'class':
             self._reset_items_for_per_class_mode()
         elif self.unit == 'document':

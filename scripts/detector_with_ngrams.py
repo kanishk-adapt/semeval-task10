@@ -83,10 +83,16 @@ class SexismDetectorWithVocab(SexismDetector):
         else:
             return numpy.single
 
-    def get_item_feature_vector(self, item):  # sub-classes may want to add features here
+    def get_item_feature_vector(self, item, matrix = None, row = None):
+        # sub-classes may want to add features here that do not fit
+        # the "count events" concept of get_item_events()
         columns = self.get_vector_length()
         dtype   = self.get_vector_dtype()
-        vector = numpy.zeros((columns,), dtype=dtype)
+        if matrix is None:
+            vector = numpy.zeros((columns,), dtype=dtype)
+        else:
+            assert row is not None
+            vector = matrix[row, :]  # create a view of the row
         non_zero_columns = set()
         for event in self.get_item_events(item):
             try:
@@ -155,6 +161,8 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
         self.tag_combinations = []
         for tag_combination in tag_combinations.split(','):
             # expand e.g. 'pd' to ('p', 'd')
+            if not tag_combination:  # ''.split(',') yields ['']
+                continue
             self.tag_combinations.append(tuple(tag_combination))
 
     def get_item_events(self, item):
@@ -187,7 +195,7 @@ class SexismDetectorWithNgrams(SexismDetectorWithVocab):
                 sequence = item.get_tags(tag_combination)
                 yield (tag_combo_name, sequence)
         elif self.tag_combinations:
-            raise ValueError('Requested tag-based features but tags not loaded')
+            raise ValueError('Requested tag-based features %r but tags not loaded' %self.tag_combinations)
 
 
 class SexismDetectorWithNgramsAndWordlists(SexismDetectorWithNgrams):

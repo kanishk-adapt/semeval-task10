@@ -122,6 +122,7 @@ class EDOSDataset(Dataset):
             `run` is ignored for settype2setting[settype][-1] == False
         """
         global settype2setting
+        debug_doc_id = None  # 'sexism2022_english-7358'
         self.is_tokenised = False
         path_suffix, is_labelled, cross_validation = settype2setting[settype]
         if cross_validation:
@@ -162,6 +163,9 @@ class EDOSDataset(Dataset):
                 sys.stderr.write('Loaded document %s with label %s\n' %(doc_id, label))
         self.is_labelled = is_labelled
         # load POS and deprel features
+        if not self.load_tags:
+            self.tags = None
+            return
         features_path = os.path.join(path, 'dep-pos', 'extracted_features.csv')
         fast_features_path = os.path.join(  # e.g. extracted_features-k8020-dev-run-1.csv
             path, 'dep-pos',
@@ -191,9 +195,13 @@ class EDOSDataset(Dataset):
                     doc_id = row['rewire_id']
                 else:
                     doc_id = row[df.name2column['rewire_id']]
+                if debug_doc_id and doc_id == debug_doc_id:
+                    sys.stderr.write('Found %s\n' %doc_id)
                 if doc_id != last_doc_id and last_doc_id is not None:
                     self.add_doc_tags(all_tags, doc_tags)
                     doc_tags = {}
+                    if debug_doc_id and doc_id == debug_doc_id:
+                        sys.stderr.write('Reset doc_tags\n')
                 if doc_tags:
                     # consistency check
                     assert doc_tags['doc_id'] == doc_id
@@ -215,11 +223,15 @@ class EDOSDataset(Dataset):
                     except AssertionError:
                         raise ValueError('unexpected tag %r of type %s in row %r' %(tag, type(tag), row))
                     doc_tags[tag_name].append(tag)
+                if debug_doc_id and doc_id == debug_doc_id:
+                    sys.stderr.write('Updated doc_tags to %r for %s\n' %(doc_tags, doc_id))
                 # prepare for next row
                 last_doc_id = doc_id
             # complete last item
             if doc_tags:
                 self.add_doc_tags(all_tags, doc_tags)
+                if debug_doc_id and doc_id == debug_doc_id:
+                    sys.stderr.write('Added doc_tags to list\n')
             # check all training items are covered
             # (add_doc_tags() has rejected items outside our
             # dataset, so we only need to check the number
@@ -237,6 +249,12 @@ class EDOSDataset(Dataset):
                 sys.stderr.write('Warning: ignoring %s as it does not cover all of %s\n' %(
                     features_path, data_path
                 ))
+                # scan doc_idx for missing documents
+                for idx, doc_tags in enumerate(all_tags):
+                    if idx != doc_tags[0]:
+                        sys.stderr.write('First missing item is %s\n' %self.docs[idx])
+                        break
+                self.tags = None
                 save_ffp = False
             all_tags = None  # release memory
             if save_ffp:

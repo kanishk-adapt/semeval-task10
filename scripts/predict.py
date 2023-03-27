@@ -31,7 +31,7 @@ def get_seed(args):
         seed = base64.b64encode(numpy.random.bytes(32)).decode('utf-8')
     return seed
 
-def get_test_data(args, seed, task = 'a'):
+def get_test_data(args, seed, task = 'a', load_tags = True):
     return EDOSDataset(
         seed,
         args.dataset_path, args.run, args.settype,
@@ -39,7 +39,8 @@ def get_test_data(args, seed, task = 'a'):
         fraction_of_subunits = None,
         number_of_subunits = None,
         deduplicate = False,
-        skip_not_sexist = False if task == 'a' else True
+        skip_not_sexist = False if task == 'a' else True,
+        load_tags = load_tags,
     )
 
 def main():
@@ -89,7 +90,11 @@ def main():
     print('Loading model...')
     detector = joblib.load(args.model)
     print('Dateset seed:', seed)
-    test_data = get_test_data(args, seed, detector.task)
+    test_data = get_test_data(
+        args, seed,
+        task      = detector.task,
+        load_tags = detector.tag_combinations,
+    )
     print('Number of test items:', len(test_data))
     print('Making predictions...')
     predictions = detector.predict(test_data)
