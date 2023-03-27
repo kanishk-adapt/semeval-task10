@@ -173,6 +173,8 @@ class EDOSDataset(Dataset):
         )
         tag_names = 'token pos_tag dep_tag sentiment'.split()
         if os.path.exists(fast_features_path):
+            if debug_doc_id or self.debug:
+                sys.stderr.write('Debug: using cached tags %s\n' %fast_features_path)
             df = TagReader(fast_features_path)
             is_pandas = False
             save_ffp = False
