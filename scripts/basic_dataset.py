@@ -49,7 +49,7 @@ class Item:
             return None
         text = []
         info = []
-        for _, doc_idx in enumerate(self.documents):
+        for doc_idx in self.documents:
             document = self.dataset.documents[doc_idx]
             if get_text: text.append(document)
             if get_info: info.append((doc_idx, len(document.split())))
